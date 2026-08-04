@@ -1,15 +1,26 @@
 """FastAPI Kanban task tracker with strict unidirectional state transitions."""
 
 import itertools
+from datetime import date, timedelta
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from schemas import STATUS_ORDER, TaskCreate, TaskResponse, TaskStatus, TaskUpdate
+from schemas import (
+    STATUS_ORDER,
+    DueFilter,
+    TaskCreate,
+    TaskResponse,
+    TaskStatus,
+    TaskUpdate,
+)
 
-app = FastAPI(title="Kanban Task Tracker", version="1.0.0")
+app = FastAPI(title="Kanban Task Tracker", version="1.1.0")
+
+# Tasks due within this many days (inclusive, starting today) count as "due soon".
+DUE_SOON_WINDOW_DAYS = 2
 
 # --- In-memory store -------------------------------------------------------
 
@@ -50,6 +61,24 @@ def validate_transition(current: TaskStatus, target: TaskStatus) -> None:
         )
 
 
+def is_overdue(task: dict, today: date) -> bool:
+    """Past due and not completed. DONE tasks are never overdue."""
+    return (
+        task["due_date"] is not None
+        and task["due_date"] < today
+        and task["status"] != TaskStatus.DONE
+    )
+
+
+def is_due_soon(task: dict, today: date) -> bool:
+    """Due between today and the due-soon window (inclusive), not completed."""
+    return (
+        task["due_date"] is not None
+        and task["status"] != TaskStatus.DONE
+        and today <= task["due_date"] <= today + timedelta(days=DUE_SOON_WINDOW_DAYS)
+    )
+
+
 # --- API routes ------------------------------------------------------------
 
 
@@ -70,6 +99,7 @@ def create_task(payload: TaskCreate) -> dict:
         "title": payload.title,
         "description": payload.description,
         "status": TaskStatus.TODO,
+        "due_date": payload.due_date,
     }
     _tasks[task_id] = task
     return task
@@ -78,10 +108,19 @@ def create_task(payload: TaskCreate) -> dict:
 @app.get("/api/tasks", response_model=list[TaskResponse])
 def list_tasks(
     task_status: Optional[TaskStatus] = Query(default=None, alias="status"),
+    due: Optional[DueFilter] = Query(default=None),
 ) -> list[dict]:
     tasks = list(_tasks.values())
     if task_status is not None:
         tasks = [t for t in tasks if t["status"] == task_status]
+    if due is not None:
+        today = date.today()
+        if due == DueFilter.OVERDUE:
+            tasks = [t for t in tasks if is_overdue(t, today)]
+        elif due == DueFilter.SOON:
+            tasks = [t for t in tasks if is_due_soon(t, today)]
+        elif due == DueFilter.NONE:
+            tasks = [t for t in tasks if t["due_date"] is None]
     return tasks
 
 
@@ -101,6 +140,9 @@ def update_task(task_id: int, payload: TaskUpdate) -> dict:
         task["title"] = payload.title
     if payload.description is not None:
         task["description"] = payload.description
+    # An explicit "due_date": null clears the date; an absent field leaves it alone.
+    if "due_date" in payload.model_fields_set:
+        task["due_date"] = payload.due_date
     return task
 
 

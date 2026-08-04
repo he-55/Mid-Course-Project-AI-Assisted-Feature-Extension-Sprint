@@ -1,9 +1,11 @@
 """Pytest suite for the Kanban task tracker API."""
 
+from datetime import date, timedelta
+
 import pytest
 from fastapi.testclient import TestClient
 
-from main import app, reset_store
+from main import DUE_SOON_WINDOW_DAYS, app, reset_store
 
 client = TestClient(app)
 
@@ -188,3 +190,138 @@ def test_same_status_update_is_allowed():
     response = client.patch(f"/api/tasks/{task['id']}", json={"status": "todo"})
     assert response.status_code == 200
     assert response.json()["status"] == "todo"
+
+
+# --- Due dates --------------------------------------------------------------
+
+
+def iso(offset_days: int) -> str:
+    """ISO date string relative to today."""
+    return (date.today() + timedelta(days=offset_days)).isoformat()
+
+
+def make_task_due(title: str, due: str | None) -> dict:
+    response = client.post("/api/tasks", json={"title": title, "due_date": due})
+    assert response.status_code == 201
+    return response.json()
+
+
+def test_create_task_with_due_date():
+    response = client.post(
+        "/api/tasks", json={"title": "Dated", "due_date": "2026-12-31"}
+    )
+    assert response.status_code == 201
+    assert response.json()["due_date"] == "2026-12-31"
+
+
+def test_create_task_without_due_date_defaults_to_none():
+    task = make_task("Undated")
+    assert task["due_date"] is None
+
+
+def test_create_task_with_invalid_due_date_returns_422():
+    for bad_value in ["not-a-date", "31/12/2026", "2026-13-01", 12345]:
+        response = client.post(
+            "/api/tasks", json={"title": "Bad date", "due_date": bad_value}
+        )
+        assert response.status_code == 422, f"expected 422 for {bad_value!r}"
+
+
+def test_update_due_date():
+    task = make_task("Reschedulable")
+    response = client.patch(
+        f"/api/tasks/{task['id']}", json={"due_date": "2027-01-15"}
+    )
+    assert response.status_code == 200
+    assert response.json()["due_date"] == "2027-01-15"
+
+
+def test_update_with_invalid_due_date_returns_422():
+    task = make_task("Still valid")
+    response = client.patch(
+        f"/api/tasks/{task['id']}", json={"due_date": "soonish"}
+    )
+    assert response.status_code == 422
+
+
+def test_clear_due_date_with_explicit_null():
+    task = make_task_due("Clearable", "2026-12-31")
+    response = client.patch(f"/api/tasks/{task['id']}", json={"due_date": None})
+    assert response.status_code == 200
+    assert response.json()["due_date"] is None
+
+
+def test_update_without_due_date_field_preserves_it():
+    task = make_task_due("Sticky date", "2026-12-31")
+    response = client.patch(f"/api/tasks/{task['id']}", json={"title": "Renamed"})
+    assert response.status_code == 200
+    assert response.json()["due_date"] == "2026-12-31"
+
+
+# --- Due filters ------------------------------------------------------------
+
+
+def test_filter_overdue_only():
+    make_task_due("Past due", iso(-1))
+    make_task_due("Future", iso(30))
+    make_task("Undated")
+
+    response = client.get("/api/tasks", params={"due": "overdue"})
+    assert response.status_code == 200
+    assert [t["title"] for t in response.json()] == ["Past due"]
+
+
+def test_overdue_filter_excludes_done_tasks():
+    finished = make_task_due("Finished late", iso(-5))
+    make_task_due("Still late", iso(-5))
+    client.patch(f"/api/tasks/{finished['id']}", json={"status": "in_progress"})
+    client.patch(f"/api/tasks/{finished['id']}", json={"status": "done"})
+
+    response = client.get("/api/tasks", params={"due": "overdue"})
+    assert [t["title"] for t in response.json()] == ["Still late"]
+
+
+def test_filter_due_soon():
+    make_task_due("Due today", iso(0))
+    make_task_due("Inside window", iso(DUE_SOON_WINDOW_DAYS))
+    make_task_due("Past due", iso(-1))
+    make_task_due("Far future", iso(DUE_SOON_WINDOW_DAYS + 5))
+    make_task("Undated")
+
+    response = client.get("/api/tasks", params={"due": "soon"})
+    assert response.status_code == 200
+    titles = {t["title"] for t in response.json()}
+    assert titles == {"Due today", "Inside window"}
+
+
+def test_due_soon_filter_excludes_done_tasks():
+    finished = make_task_due("Done today", iso(0))
+    client.patch(f"/api/tasks/{finished['id']}", json={"status": "in_progress"})
+    client.patch(f"/api/tasks/{finished['id']}", json={"status": "done"})
+
+    response = client.get("/api/tasks", params={"due": "soon"})
+    assert response.json() == []
+
+
+def test_filter_no_due_date():
+    make_task_due("Dated", iso(3))
+    make_task("Undated")
+
+    response = client.get("/api/tasks", params={"due": "none"})
+    assert [t["title"] for t in response.json()] == ["Undated"]
+
+
+def test_due_filter_combines_with_status_filter():
+    started = make_task_due("Overdue in progress", iso(-2))
+    make_task_due("Overdue in todo", iso(-2))
+    client.patch(f"/api/tasks/{started['id']}", json={"status": "in_progress"})
+
+    response = client.get(
+        "/api/tasks", params={"due": "overdue", "status": "in_progress"}
+    )
+    assert [t["title"] for t in response.json()] == ["Overdue in progress"]
+
+
+def test_invalid_due_filter_returns_422():
+    response = client.get("/api/tasks", params={"due": "yesterday"})
+    assert response.status_code == 422

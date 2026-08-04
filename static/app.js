@@ -5,15 +5,21 @@ const API_URL = "/api/tasks";
 // Mirrors the backend's STATUS_ORDER: moves to a lower rank are illegal.
 const STATUS_ORDER = { todo: 0, in_progress: 1, done: 2 };
 
+// Mirrors the backend's DUE_SOON_WINDOW_DAYS.
+const DUE_SOON_WINDOW_DAYS = 2;
+
 const board = document.getElementById("board");
 const form = document.getElementById("task-form");
 const titleInput = document.getElementById("task-title");
 const descriptionInput = document.getElementById("task-description");
+const dueDateInput = document.getElementById("task-due-date");
+const filterBar = document.getElementById("filter-bar");
 const toast = document.getElementById("toast");
 
 let draggedTaskId = null;
 let draggedTaskStatus = null;
 let toastTimer = null;
+let activeFilter = "all";
 
 // --- API helpers -----------------------------------------------------------
 
@@ -36,14 +42,71 @@ async function apiRequest(url, options = {}) {
 }
 
 const fetchTasks = () => apiRequest(API_URL);
-const createTask = (title, description) =>
+const createTask = (title, description, dueDate) =>
   apiRequest(API_URL, {
     method: "POST",
-    body: JSON.stringify({ title, description: description || null }),
+    body: JSON.stringify({
+      title,
+      description: description || null,
+      due_date: dueDate || null,
+    }),
   });
 const updateTask = (id, payload) =>
   apiRequest(`${API_URL}/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
 const deleteTask = (id) => apiRequest(`${API_URL}/${id}`, { method: "DELETE" });
+
+// --- Due-date helpers ------------------------------------------------------
+// Due dates are "YYYY-MM-DD" strings; comparing them lexicographically avoids
+// timezone pitfalls of Date parsing.
+
+function localISODate(offsetDays = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${month}-${day}`;
+}
+
+function isOverdue(task) {
+  return Boolean(task.due_date) && task.status !== "done" && task.due_date < localISODate();
+}
+
+function isDueSoon(task) {
+  return (
+    Boolean(task.due_date) &&
+    task.status !== "done" &&
+    task.due_date >= localISODate() &&
+    task.due_date <= localISODate(DUE_SOON_WINDOW_DAYS)
+  );
+}
+
+function formatDueDate(isoDate) {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: year === new Date().getFullYear() ? undefined : "numeric",
+  });
+}
+
+// --- Filtering -------------------------------------------------------------
+
+const FILTER_PREDICATES = {
+  all: () => true,
+  overdue: (task) => isOverdue(task),
+  soon: (task) => isDueSoon(task),
+  none: (task) => !task.due_date,
+};
+
+filterBar.addEventListener("click", (event) => {
+  const pill = event.target.closest(".filter-pill");
+  if (!pill) return;
+  activeFilter = pill.dataset.filter;
+  for (const p of filterBar.querySelectorAll(".filter-pill")) {
+    p.classList.toggle("active", p === pill);
+  }
+  renderBoard();
+});
 
 // --- Rendering -------------------------------------------------------------
 
@@ -53,6 +116,11 @@ function buildCard(task) {
   card.draggable = true;
   card.dataset.taskId = String(task.id);
   card.dataset.status = task.status;
+
+  const overdue = isOverdue(task);
+  const dueSoon = isDueSoon(task);
+  if (overdue) card.classList.add("overdue");
+  else if (dueSoon) card.classList.add("due-soon");
 
   const title = document.createElement("div");
   title.className = "card-title";
@@ -64,6 +132,23 @@ function buildCard(task) {
     description.className = "card-description";
     description.textContent = task.description;
     card.appendChild(description);
+  }
+
+  if (task.due_date) {
+    const badge = document.createElement("span");
+    badge.className = "due-badge";
+    let label = `\u{1F4C5} ${formatDueDate(task.due_date)}`;
+    if (task.status === "done") {
+      badge.classList.add("done");
+    } else if (overdue) {
+      badge.classList.add("overdue");
+      label += " · Overdue";
+    } else if (dueSoon) {
+      badge.classList.add("due-soon");
+      label += " · Due soon";
+    }
+    badge.textContent = label;
+    card.appendChild(badge);
   }
 
   const actions = document.createElement("div");
@@ -110,12 +195,14 @@ async function renderBoard() {
     return;
   }
 
+  const visibleTasks = tasks.filter(FILTER_PREDICATES[activeFilter]);
+
   for (const column of board.querySelectorAll(".column")) {
     const status = column.dataset.status;
     const list = column.querySelector(".task-list");
     list.replaceChildren();
 
-    const columnTasks = tasks.filter((t) => t.status === status);
+    const columnTasks = visibleTasks.filter((t) => t.status === status);
     for (const task of columnTasks) list.appendChild(buildCard(task));
     column.querySelector(".task-count").textContent = String(columnTasks.length);
   }
@@ -182,7 +269,7 @@ form.addEventListener("submit", async (event) => {
   if (!title) return;
 
   try {
-    await createTask(title, descriptionInput.value.trim());
+    await createTask(title, descriptionInput.value.trim(), dueDateInput.value);
     form.reset();
     titleInput.focus();
     renderBoard();
@@ -196,6 +283,8 @@ async function editTask(task) {
   if (newTitle === null) return;
   const newDescription = prompt("Description:", task.description || "");
   if (newDescription === null) return;
+  const newDueDate = prompt("Due date (YYYY-MM-DD, empty to clear):", task.due_date || "");
+  if (newDueDate === null) return;
 
   const trimmedTitle = newTitle.trim();
   if (!trimmedTitle) {
@@ -203,10 +292,17 @@ async function editTask(task) {
     return;
   }
 
+  const trimmedDueDate = newDueDate.trim();
+  if (trimmedDueDate && !/^\d{4}-\d{2}-\d{2}$/.test(trimmedDueDate)) {
+    showToast("Due date must be in YYYY-MM-DD format.");
+    return;
+  }
+
   try {
     await updateTask(task.id, {
       title: trimmedTitle,
       description: newDescription.trim() || null,
+      due_date: trimmedDueDate || null,
     });
     renderBoard();
   } catch (error) {
