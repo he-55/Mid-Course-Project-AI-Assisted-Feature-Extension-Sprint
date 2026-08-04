@@ -14,12 +14,19 @@ const titleInput = document.getElementById("task-title");
 const descriptionInput = document.getElementById("task-description");
 const dueDateInput = document.getElementById("task-due-date");
 const filterBar = document.getElementById("filter-bar");
+const searchInput = document.getElementById("search-input");
+const searchClear = document.getElementById("search-clear");
+const matchCounter = document.getElementById("match-counter");
 const toast = document.getElementById("toast");
+
+const SEARCH_DEBOUNCE_MS = 180;
 
 let draggedTaskId = null;
 let draggedTaskStatus = null;
 let toastTimer = null;
 let activeFilter = "all";
+let totalTaskCount = 0;
+let searchDebounceTimer = null;
 
 // --- API helpers -----------------------------------------------------------
 
@@ -116,6 +123,10 @@ function buildCard(task) {
   card.draggable = true;
   card.dataset.taskId = String(task.id);
   card.dataset.status = task.status;
+  // Raw values for search matching and highlight re-rendering.
+  card.dataset.title = task.title;
+  card.dataset.description = task.description || "";
+  card.dataset.searchText = `${task.title}\n${task.description || ""}`.toLowerCase();
 
   const overdue = isOverdue(task);
   const dueSoon = isDueSoon(task);
@@ -195,6 +206,7 @@ async function renderBoard() {
     return;
   }
 
+  totalTaskCount = tasks.length;
   const visibleTasks = tasks.filter(FILTER_PREDICATES[activeFilter]);
 
   for (const column of board.querySelectorAll(".column")) {
@@ -204,9 +216,126 @@ async function renderBoard() {
 
     const columnTasks = visibleTasks.filter((t) => t.status === status);
     for (const task of columnTasks) list.appendChild(buildCard(task));
-    column.querySelector(".task-count").textContent = String(columnTasks.length);
+  }
+
+  // Search runs on the freshly rendered cards: visibility, highlights,
+  // per-column counts, empty states, and the match counter.
+  applySearch();
+}
+
+// --- Search ----------------------------------------------------------------
+
+/**
+ * Render `text` into `element`, wrapping case-insensitive occurrences of
+ * `query` in <mark class="search-hit">. Built with DOM nodes (no innerHTML),
+ * so task content is never parsed as HTML.
+ */
+function renderHighlighted(element, text, query) {
+  element.replaceChildren();
+  if (!query) {
+    element.textContent = text;
+    return;
+  }
+  const lowerText = text.toLowerCase();
+  let cursor = 0;
+  let matchIndex;
+  while ((matchIndex = lowerText.indexOf(query, cursor)) !== -1) {
+    element.append(text.slice(cursor, matchIndex));
+    const mark = document.createElement("mark");
+    mark.className = "search-hit";
+    mark.textContent = text.slice(matchIndex, matchIndex + query.length);
+    element.append(mark);
+    cursor = matchIndex + query.length;
+  }
+  element.append(text.slice(cursor));
+}
+
+/**
+ * Apply the current search query on top of the already-rendered board
+ * (pill filters decide which cards exist; search decides which are shown).
+ * Pure DOM pass — no refetch, safe to call after every render or keystroke.
+ */
+function applySearch() {
+  const query = searchInput.value.trim().toLowerCase();
+  searchClear.hidden = query === "";
+
+  let visibleTotal = 0;
+  for (const column of board.querySelectorAll(".column")) {
+    const list = column.querySelector(".task-list");
+    list.querySelector(".empty-state")?.remove();
+
+    let visibleInColumn = 0;
+    for (const card of list.querySelectorAll(".card")) {
+      const matches = query === "" || card.dataset.searchText.includes(query);
+      card.classList.toggle("search-hidden", !matches);
+      if (matches) visibleInColumn += 1;
+
+      const highlightQuery = matches ? query : "";
+      renderHighlighted(card.querySelector(".card-title"), card.dataset.title, highlightQuery);
+      const descriptionEl = card.querySelector(".card-description");
+      if (descriptionEl) {
+        renderHighlighted(descriptionEl, card.dataset.description, highlightQuery);
+      }
+    }
+
+    const filtering = query !== "" || activeFilter !== "all";
+    if (visibleInColumn === 0 && filtering) {
+      const empty = document.createElement("div");
+      empty.className = "empty-state";
+      empty.textContent = "No matching tasks";
+      list.appendChild(empty);
+    }
+
+    column.querySelector(".task-count").textContent = String(visibleInColumn);
+    visibleTotal += visibleInColumn;
+  }
+
+  const filtering = query !== "" || activeFilter !== "all";
+  matchCounter.hidden = !filtering;
+  if (filtering) {
+    const noun = totalTaskCount === 1 ? "task" : "tasks";
+    matchCounter.textContent = `Showing ${visibleTotal} of ${totalTaskCount} ${noun}`;
   }
 }
+
+searchInput.addEventListener("input", () => {
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(applySearch, SEARCH_DEBOUNCE_MS);
+});
+
+searchInput.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    searchInput.value = "";
+    applySearch();
+    searchInput.blur();
+  }
+});
+
+searchClear.addEventListener("click", () => {
+  searchInput.value = "";
+  applySearch();
+  searchInput.focus();
+});
+
+// "/" (outside inputs) or Ctrl/Cmd+K focuses the search field.
+document.addEventListener("keydown", (event) => {
+  const isModK = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k";
+  const isSlash =
+    event.key === "/" && !event.metaKey && !event.ctrlKey && !event.altKey;
+  if (!isModK && !isSlash) return;
+
+  const target = event.target;
+  const isTyping =
+    target instanceof HTMLElement &&
+    (target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.isContentEditable);
+  if (isSlash && isTyping) return;
+
+  event.preventDefault();
+  searchInput.focus();
+  searchInput.select();
+});
 
 // --- Drag and drop ---------------------------------------------------------
 

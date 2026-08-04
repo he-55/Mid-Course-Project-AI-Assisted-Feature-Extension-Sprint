@@ -73,14 +73,104 @@
 
     #task-form button:hover { filter: brightness(1.1); }
 
-    /* --- Filter bar --- */
-    :root { --warning: #b25b00; }
+    /* --- Filter + search bar --- */
+    :root { --warning: #b25b00; --highlight: #ffe380; }
 
     #filter-bar {
       display: flex;
       gap: 8px;
       margin-bottom: 16px;
       flex-wrap: wrap;
+      align-items: center;
+    }
+
+    /* --- Search --- */
+    #search-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      margin-left: auto;
+    }
+
+    #search-icon {
+      position: absolute;
+      left: 10px;
+      color: var(--text-muted);
+      pointer-events: none;
+      display: flex;
+    }
+
+    #search-input {
+      width: 240px;
+      padding: 7px 32px 7px 34px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--surface);
+      font-size: 0.85rem;
+      color: var(--text);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    #search-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.15);
+    }
+
+    /* Hide the browser's native clear control; we provide our own. */
+    #search-input::-webkit-search-cancel-button { display: none; }
+
+    #search-clear {
+      position: absolute;
+      right: 8px;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 50%;
+    }
+
+    #search-clear:hover { background: var(--bg); color: var(--text); }
+
+    #match-counter {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 5px 12px;
+      white-space: nowrap;
+    }
+
+    /* --- Search result states --- */
+    mark.search-hit {
+      background: var(--highlight);
+      color: #172b4d;
+      border-radius: 2px;
+      padding: 0 1px;
+    }
+
+    .card { animation: card-in 0.18s ease; }
+
+    @keyframes card-in {
+      from { opacity: 0; transform: translateY(4px) scale(0.98); }
+      to { opacity: 1; transform: none; }
+    }
+
+    .card.search-hidden { display: none; }
+
+    .empty-state {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 20px 12px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      animation: card-in 0.18s ease;
     }
 
     .filter-pill {
@@ -267,6 +357,19 @@
     <button type="button" class="filter-pill" data-filter="overdue">Overdue</button>
     <button type="button" class="filter-pill" data-filter="soon">Due Soon</button>
     <button type="button" class="filter-pill" data-filter="none">No Due Date</button>
+    <span id="match-counter" hidden></span>
+    <div id="search-wrap">
+      <span id="search-icon" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round">
+          <circle cx="11" cy="11" r="7"></circle>
+          <line x1="21" y1="21" x2="16.5" y2="16.5"></line>
+        </svg>
+      </span>
+      <input id="search-input" type="search" placeholder="Search tasks…  ( / )"
+             aria-label="Search tasks" autocomplete="off" />
+      <button type="button" id="search-clear" aria-label="Clear search" hidden>✕</button>
+    </div>
   </nav>
 
   <main id="board">
