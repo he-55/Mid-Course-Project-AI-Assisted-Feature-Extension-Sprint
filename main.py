@@ -100,6 +100,7 @@ def create_task(payload: TaskCreate) -> dict:
         "description": payload.description,
         "status": TaskStatus.TODO,
         "due_date": payload.due_date,
+        "tags": payload.tags,
     }
     _tasks[task_id] = task
     return task
@@ -109,10 +110,16 @@ def create_task(payload: TaskCreate) -> dict:
 def list_tasks(
     task_status: Optional[TaskStatus] = Query(default=None, alias="status"),
     due: Optional[DueFilter] = Query(default=None),
+    tag: Optional[str] = Query(default=None, min_length=1),
 ) -> list[dict]:
     tasks = list(_tasks.values())
     if task_status is not None:
         tasks = [t for t in tasks if t["status"] == task_status]
+    if tag is not None:
+        # Stored tags are normalized lowercase, so lowering the query
+        # gives case-insensitive matching.
+        wanted = tag.strip().lower()
+        tasks = [t for t in tasks if wanted in t["tags"]]
     if due is not None:
         today = date.today()
         if due == DueFilter.OVERDUE:
@@ -143,6 +150,9 @@ def update_task(task_id: int, payload: TaskUpdate) -> dict:
     # An explicit "due_date": null clears the date; an absent field leaves it alone.
     if "due_date" in payload.model_fields_set:
         task["due_date"] = payload.due_date
+    # A tags list (including []) replaces wholesale; None/absent leaves them alone.
+    if payload.tags is not None:
+        task["tags"] = payload.tags
     return task
 
 

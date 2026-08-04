@@ -13,7 +13,9 @@ const form = document.getElementById("task-form");
 const titleInput = document.getElementById("task-title");
 const descriptionInput = document.getElementById("task-description");
 const dueDateInput = document.getElementById("task-due-date");
+const tagsInput = document.getElementById("task-tags");
 const filterBar = document.getElementById("filter-bar");
+const activeTagPill = document.getElementById("active-tag-pill");
 const searchInput = document.getElementById("search-input");
 const searchClear = document.getElementById("search-clear");
 const matchCounter = document.getElementById("match-counter");
@@ -25,6 +27,7 @@ let draggedTaskId = null;
 let draggedTaskStatus = null;
 let toastTimer = null;
 let activeFilter = "all";
+let activeTag = null;
 let totalTaskCount = 0;
 let searchDebounceTimer = null;
 
@@ -49,13 +52,14 @@ async function apiRequest(url, options = {}) {
 }
 
 const fetchTasks = () => apiRequest(API_URL);
-const createTask = (title, description, dueDate) =>
+const createTask = (title, description, dueDate, tags) =>
   apiRequest(API_URL, {
     method: "POST",
     body: JSON.stringify({
       title,
       description: description || null,
       due_date: dueDate || null,
+      tags,
     }),
   });
 const updateTask = (id, payload) =>
@@ -96,6 +100,33 @@ function formatDueDate(isoDate) {
   });
 }
 
+// --- Tags ------------------------------------------------------------------
+
+const TAG_HUE_COUNT = 6;
+
+// "frontend, API,api" -> ["frontend", "api"] (server normalizes again).
+function parseTagsInput(raw) {
+  return [...new Set(
+    raw.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean)
+  )];
+}
+
+// Deterministic tag -> hue class so a tag has the same color everywhere.
+function tagHueClass(tag) {
+  let hash = 0;
+  for (const char of tag) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return `tag-hue-${hash % TAG_HUE_COUNT}`;
+}
+
+function setActiveTag(tag) {
+  activeTag = tag;
+  activeTagPill.hidden = tag === null;
+  if (tag !== null) activeTagPill.textContent = `tag: ${tag} ✕`;
+  renderBoard();
+}
+
+activeTagPill.addEventListener("click", () => setActiveTag(null));
+
 // --- Filtering -------------------------------------------------------------
 
 const FILTER_PREDICATES = {
@@ -126,7 +157,8 @@ function buildCard(task) {
   // Raw values for search matching and highlight re-rendering.
   card.dataset.title = task.title;
   card.dataset.description = task.description || "";
-  card.dataset.searchText = `${task.title}\n${task.description || ""}`.toLowerCase();
+  card.dataset.searchText =
+    `${task.title}\n${task.description || ""}\n${task.tags.join("\n")}`.toLowerCase();
 
   const overdue = isOverdue(task);
   const dueSoon = isDueSoon(task);
@@ -143,6 +175,21 @@ function buildCard(task) {
     description.className = "card-description";
     description.textContent = task.description;
     card.appendChild(description);
+  }
+
+  if (task.tags.length > 0) {
+    const tagRow = document.createElement("div");
+    tagRow.className = "tag-row";
+    for (const tag of task.tags) {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = `tag-chip ${tagHueClass(tag)}`;
+      chip.textContent = tag;
+      chip.title = `Filter by tag "${tag}"`;
+      chip.addEventListener("click", () => setActiveTag(tag));
+      tagRow.appendChild(chip);
+    }
+    card.appendChild(tagRow);
   }
 
   if (task.due_date) {
@@ -207,7 +254,9 @@ async function renderBoard() {
   }
 
   totalTaskCount = tasks.length;
-  const visibleTasks = tasks.filter(FILTER_PREDICATES[activeFilter]);
+  const visibleTasks = tasks
+    .filter(FILTER_PREDICATES[activeFilter])
+    .filter((t) => activeTag === null || t.tags.includes(activeTag));
 
   for (const column of board.querySelectorAll(".column")) {
     const status = column.dataset.status;
@@ -278,7 +327,7 @@ function applySearch() {
       }
     }
 
-    const filtering = query !== "" || activeFilter !== "all";
+    const filtering = query !== "" || activeFilter !== "all" || activeTag !== null;
     if (visibleInColumn === 0 && filtering) {
       const empty = document.createElement("div");
       empty.className = "empty-state";
@@ -290,7 +339,7 @@ function applySearch() {
     visibleTotal += visibleInColumn;
   }
 
-  const filtering = query !== "" || activeFilter !== "all";
+  const filtering = query !== "" || activeFilter !== "all" || activeTag !== null;
   matchCounter.hidden = !filtering;
   if (filtering) {
     const noun = totalTaskCount === 1 ? "task" : "tasks";
@@ -398,7 +447,12 @@ form.addEventListener("submit", async (event) => {
   if (!title) return;
 
   try {
-    await createTask(title, descriptionInput.value.trim(), dueDateInput.value);
+    await createTask(
+      title,
+      descriptionInput.value.trim(),
+      dueDateInput.value,
+      parseTagsInput(tagsInput.value)
+    );
     form.reset();
     titleInput.focus();
     renderBoard();
@@ -414,6 +468,8 @@ async function editTask(task) {
   if (newDescription === null) return;
   const newDueDate = prompt("Due date (YYYY-MM-DD, empty to clear):", task.due_date || "");
   if (newDueDate === null) return;
+  const newTags = prompt("Tags (comma-separated, empty to clear):", task.tags.join(", "));
+  if (newTags === null) return;
 
   const trimmedTitle = newTitle.trim();
   if (!trimmedTitle) {
@@ -432,6 +488,7 @@ async function editTask(task) {
       title: trimmedTitle,
       description: newDescription.trim() || null,
       due_date: trimmedDueDate || null,
+      tags: parseTagsInput(newTags),
     });
     renderBoard();
   } catch (error) {

@@ -4,7 +4,30 @@ from datetime import date
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+MAX_TAGS_PER_TASK = 10
+TAG_MAX_LENGTH = 30
+
+
+def normalize_tags(tags: list[str]) -> list[str]:
+    """Trim, lowercase, and de-duplicate tags (order-preserving).
+
+    Raises ValueError (surfaced as HTTP 422) for empty tags, tags over
+    TAG_MAX_LENGTH characters, or more than MAX_TAGS_PER_TASK tags.
+    """
+    normalized: list[str] = []
+    for raw in tags:
+        tag = raw.strip().lower()
+        if not tag:
+            raise ValueError("tags must not be empty or whitespace-only")
+        if len(tag) > TAG_MAX_LENGTH:
+            raise ValueError(f"tags must be at most {TAG_MAX_LENGTH} characters")
+        if tag not in normalized:
+            normalized.append(tag)
+    if len(normalized) > MAX_TAGS_PER_TASK:
+        raise ValueError(f"a task can have at most {MAX_TAGS_PER_TASK} tags")
+    return normalized
 
 
 class TaskStatus(str, Enum):
@@ -38,6 +61,12 @@ class TaskCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     description: Optional[str] = Field(default=None, max_length=2000)
     due_date: Optional[date] = None
+    tags: list[str] = Field(default_factory=list)
+
+    @field_validator("tags")
+    @classmethod
+    def _normalize_tags(cls, value: list[str]) -> list[str]:
+        return normalize_tags(value)
 
 
 class TaskUpdate(BaseModel):
@@ -51,6 +80,13 @@ class TaskUpdate(BaseModel):
     description: Optional[str] = Field(default=None, max_length=2000)
     status: Optional[TaskStatus] = None
     due_date: Optional[date] = None
+    # None = leave tags untouched; a list (including []) replaces them wholesale.
+    tags: Optional[list[str]] = None
+
+    @field_validator("tags")
+    @classmethod
+    def _normalize_tags(cls, value: Optional[list[str]]) -> Optional[list[str]]:
+        return None if value is None else normalize_tags(value)
 
 
 class TaskResponse(BaseModel):
@@ -63,3 +99,4 @@ class TaskResponse(BaseModel):
     description: Optional[str] = None
     status: TaskStatus
     due_date: Optional[date] = None
+    tags: list[str] = Field(default_factory=list)

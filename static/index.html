@@ -57,8 +57,9 @@
     }
 
     #task-title { width: 200px; }
-    #task-description { width: 240px; }
+    #task-description { width: 220px; }
     #task-due-date { width: 150px; color: var(--text); }
+    #task-tags { width: 190px; }
 
     #task-form button {
       padding: 8px 16px;
@@ -293,6 +294,40 @@
     .due-badge.due-soon { background: rgba(178, 91, 0, 0.12); color: var(--warning); }
     .due-badge.done { background: rgba(0, 135, 90, 0.12); color: var(--done); }
 
+    /* --- Tag chips --- */
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 8px;
+    }
+
+    .tag-chip {
+      border: none;
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+      line-height: 1.5;
+    }
+
+    .tag-chip:hover { filter: brightness(0.92); }
+
+    /* Deterministic per-tag palette (hash → hue class). */
+    .tag-hue-0 { background: #deebff; color: #0747a6; }
+    .tag-hue-1 { background: #e3fcef; color: #006644; }
+    .tag-hue-2 { background: #fffae6; color: #974f0c; }
+    .tag-hue-3 { background: #eae6ff; color: #403294; }
+    .tag-hue-4 { background: #ffebe6; color: #bf2600; }
+    .tag-hue-5 { background: #e6fcff; color: #00627a; }
+
+    #active-tag-pill {
+      background: var(--text);
+      border-color: var(--text);
+      color: #fff;
+    }
+
     .card-title { font-size: 0.95rem; font-weight: 600; overflow-wrap: anywhere; }
 
     .card-description {
@@ -348,6 +383,7 @@
       <input id="task-title" type="text" placeholder="Task title" required maxlength="200" />
       <input id="task-description" type="text" placeholder="Description (optional)" maxlength="2000" />
       <input id="task-due-date" type="date" title="Due date (optional)" />
+      <input id="task-tags" type="text" placeholder="Tags (comma-separated)" title="Tags, comma-separated" />
       <button type="submit">Add Task</button>
     </form>
   </header>
@@ -357,6 +393,8 @@
     <button type="button" class="filter-pill" data-filter="overdue">Overdue</button>
     <button type="button" class="filter-pill" data-filter="soon">Due Soon</button>
     <button type="button" class="filter-pill" data-filter="none">No Due Date</button>
+    <button type="button" class="filter-pill" id="active-tag-pill" hidden
+            title="Clear tag filter"></button>
     <span id="match-counter" hidden></span>
     <div id="search-wrap">
       <span id="search-icon" aria-hidden="true">

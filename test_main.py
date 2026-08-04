@@ -325,3 +325,99 @@ def test_due_filter_combines_with_status_filter():
 def test_invalid_due_filter_returns_422():
     response = client.get("/api/tasks", params={"due": "yesterday"})
     assert response.status_code == 422
+
+
+# --- Tags -------------------------------------------------------------------
+
+
+def make_task_tagged(title: str, tags: list[str]) -> dict:
+    response = client.post("/api/tasks", json={"title": title, "tags": tags})
+    assert response.status_code == 201
+    return response.json()
+
+
+def test_create_task_with_tags():
+    task = make_task_tagged("Tagged", ["frontend", "bug"])
+    assert task["tags"] == ["frontend", "bug"]
+
+
+def test_create_task_without_tags_defaults_to_empty_list():
+    task = make_task("Untagged")
+    assert task["tags"] == []
+
+
+def test_tags_are_normalized_and_deduplicated():
+    task = make_task_tagged("Messy tags", ["API", " api ", "Frontend", "frontend"])
+    assert task["tags"] == ["api", "frontend"]
+
+
+def test_invalid_tags_return_422():
+    for bad_tags in [
+        [""],  # empty tag
+        ["   "],  # whitespace-only tag
+        ["x" * 31],  # over the 30-char limit
+        [f"tag{i}" for i in range(11)],  # more than 10 tags
+    ]:
+        response = client.post(
+            "/api/tasks", json={"title": "Bad tags", "tags": bad_tags}
+        )
+        assert response.status_code == 422, f"expected 422 for {bad_tags!r}"
+
+
+def test_update_replaces_tags_wholesale():
+    task = make_task_tagged("Retag me", ["old", "stale"])
+    response = client.patch(f"/api/tasks/{task['id']}", json={"tags": ["Fresh"]})
+    assert response.status_code == 200
+    assert response.json()["tags"] == ["fresh"]
+
+
+def test_update_with_empty_list_clears_tags():
+    task = make_task_tagged("Clear me", ["doomed"])
+    response = client.patch(f"/api/tasks/{task['id']}", json={"tags": []})
+    assert response.status_code == 200
+    assert response.json()["tags"] == []
+
+
+def test_update_without_tags_field_preserves_them():
+    task = make_task_tagged("Sticky tags", ["keeper"])
+    response = client.patch(f"/api/tasks/{task['id']}", json={"title": "Renamed"})
+    assert response.status_code == 200
+    assert response.json()["tags"] == ["keeper"]
+
+
+def test_update_with_invalid_tags_returns_422():
+    task = make_task_tagged("Still tagged", ["fine"])
+    response = client.patch(f"/api/tasks/{task['id']}", json={"tags": [""]})
+    assert response.status_code == 422
+    assert client.get(f"/api/tasks/{task['id']}").json()["tags"] == ["fine"]
+
+
+def test_filter_by_tag():
+    make_task_tagged("API work", ["api"])
+    make_task_tagged("UI work", ["frontend"])
+    make_task("Untagged")
+
+    response = client.get("/api/tasks", params={"tag": "api"})
+    assert response.status_code == 200
+    assert [t["title"] for t in response.json()] == ["API work"]
+
+
+def test_filter_by_tag_is_case_insensitive():
+    make_task_tagged("API work", ["api"])
+    response = client.get("/api/tasks", params={"tag": "API"})
+    assert [t["title"] for t in response.json()] == ["API work"]
+
+
+def test_tag_filter_combines_with_status_and_due():
+    urgent = make_task_tagged("Urgent API fix", ["api"])
+    client.patch(f"/api/tasks/{urgent['id']}", json={"due_date": iso(-1)})
+    client.patch(f"/api/tasks/{urgent['id']}", json={"status": "in_progress"})
+    other = make_task_tagged("Overdue UI fix", ["frontend"])
+    client.patch(f"/api/tasks/{other['id']}", json={"due_date": iso(-1)})
+    make_task_tagged("Future API work", ["api"])
+
+    response = client.get(
+        "/api/tasks",
+        params={"tag": "api", "due": "overdue", "status": "in_progress"},
+    )
+    assert [t["title"] for t in response.json()] == ["Urgent API fix"]
