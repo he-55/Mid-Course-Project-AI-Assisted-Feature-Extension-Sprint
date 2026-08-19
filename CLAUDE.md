@@ -18,7 +18,7 @@ This file provides workspace context and operational rules for AI coding assista
 
 - `main.py`: Application entrypoint, FastAPI instance, REST routes, static files mounting (`/static`), `/health` endpoint.
 - `schemas.py`: Pydantic v2 schemas (`TaskCreate`, `TaskUpdate`, `TaskResponse`), enums (`TaskStatus`, `DueFilter`), tag normalization.
-- `test_main.py`: Pytest suite containing 43 unit tests covering health, CRUD, status transitions, tag validation, and timeline filters.
+- `tests/test_main.py`: Pytest suite containing 43 unit tests covering health, CRUD, status transitions, tag validation, and timeline filters.
 - `static/`: HTML/CSS/JS frontend files (`index.html`).
 - `docs/`: System documentation, release evidence, AI review, and midcourse deliverables.
 

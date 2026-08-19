@@ -159,7 +159,9 @@ hiba-project/
 ├── run.py                     # Convenience runner script
 ├── main.py                    # FastAPI application, REST endpoints, static mounts
 ├── schemas.py                 # Pydantic v2 schemas, enums, tag normalization
-├── test_main.py               # 43 automated unit tests
+├── tests/                    # Unit test suite
+│   ├── conftest.py            # Test configuration & path setup
+│   └── test_main.py           # 43 automated unit tests
 ├── static/                    # Frontend Kanban UI
 │   └── index.html             # Web UI HTML/CSS/JS dashboard
 ├── .github/

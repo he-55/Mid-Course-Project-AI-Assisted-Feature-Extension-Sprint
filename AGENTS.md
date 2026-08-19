@@ -57,7 +57,7 @@ The **Task Tracker REST API** is a lightweight task management system built with
    - Do NOT modify core files (`main.py`, `schemas.py`, `test_main.py`, `static/`) unless explicitly instructed for a specific minimal fix.
 2. **One Task Per Thread**: Keep agent conversations focused on a single bounded objective. Do not mix setup, security audits, feature planning, and playbook drafting in one conversation thread.
 3. **Repo-Grounded Evidence**:
-   - Always cite actual file paths (`main.py`, `schemas.py`, `test_main.py`, `static/index.html`, `Dockerfile`, `.dockerignore`, `.github/workflows/ci.yml`, `README.md`) and line numbers.
+   - Always cite actual file paths (`main.py`, `schemas.py`, `tests/test_main.py`, `static/index.html`, `Dockerfile`, `.dockerignore`, `.github/workflows/ci.yml`, `README.md`) and line numbers.
    - If a behavior, command, or file is not visible, mark it as `[NOT VISIBLE]` or `[UNCONFIRMED]` rather than guessing or inferring from external conventions.
 
 ---
