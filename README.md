@@ -1,59 +1,204 @@
-# Kanban Task Tracker
+# Task Tracker REST API & Kanban UI
 
-A Kanban-style task tracker built with **FastAPI** (backend) and **Vanilla HTML/CSS/JS** (frontend, no frameworks). Tasks move strictly forward through `To Do → In Progress → Done`, with due dates, overdue/due-soon indicators, real-time search, and tags.
+A production-grade Task Tracker application powered by Python 3.11, FastAPI, Pydantic v2, and a responsive Vanilla JavaScript Kanban interface.
 
-Sprint documentation (user stories, verification evidence, ADR, prompt log) lives in [`docs/`](docs/).
+> **Active Branch**: `final-project`  
+> **Course**: AI-Assisted Coding (End-of-Course Project)  
+> **GitHub Repository**: [https://github.com/he-55/Mid-Course-Project-AI-Assisted-Feature-Extension-Sprint](https://github.com/he-55/Mid-Course-Project-AI-Assisted-Feature-Extension-Sprint)
 
-## Requirements
+---
 
-- Python 3.10+ (developed on 3.13)
-- No database or Node.js needed — storage is in-memory and the frontend is static files.
+## 📌 Release Summary
 
-## Setup (one-time)
+| Key Metric / Property | Specification |
+| :--- | :--- |
+| **Git Branch** | `final-project` |
+| **Repository URL** | [https://github.com/he-55/Mid-Course-Project-AI-Assisted-Feature-Extension-Sprint](https://github.com/he-55/Mid-Course-Project-AI-Assisted-Feature-Extension-Sprint) |
+| **Backend Stack** | Python 3.11+, FastAPI 0.110+, Pydantic v2, Uvicorn |
+| **Frontend Stack** | HTML5, Vanilla CSS3, JavaScript (Kanban Dashboard) |
+| **Test Suite Status** | 43/43 Pytest Unit Tests Passing (100% Green) |
 
-From the project root:
-
-```bash
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-```
-
-## Run the backend
-
-```bash
-.venv/bin/uvicorn main:app --reload --port 8000
-```
-
-- `--reload` restarts the server automatically when you edit Python files.
-- Interactive API docs (Swagger UI): http://localhost:8000/docs
-
-> **Note:** storage is in-memory, so all tasks reset whenever the server restarts. This is expected.
-
-## Open the frontend
-
-The backend serves the frontend — no separate build or server. With uvicorn running, open:
-
-**http://localhost:8000**
-
-You'll get the Kanban board: create tasks (title, description, due date, tags), drag cards between columns (backward moves are blocked), filter by timeline pills or tag chips, and search with `/` or `Ctrl/Cmd + K`. Frontend files live in [`static/`](static/); after editing them, just refresh the browser — no server restart needed.
-
-## Run the tests
+### Quick Start Commands
 
 ```bash
-.venv/bin/python -m pytest test_main.py -v
+# 1. Install dependencies
+pip install -r requirements.txt
+
+# 2. Launch API and Web UI server
+python run.py
+# OR
+uvicorn main:app --reload
+
+# 3. Execute unit test suite
+pytest -v
+
+# 4. Containerized Execution
+docker build -t task-tracker .
+docker run --rm -d -p 8000:8000 --name tt-app task-tracker
 ```
 
-The suite (43 tests) covers the health check, CRUD, illegal state transitions (HTTP 400), due-date validation and timeline filters, and tag normalization and filtering. It uses FastAPI's `TestClient`, so **the server does not need to be running**.
+### Essential Project Deliverables
 
-> Tip: activate the venv with `source .venv/bin/activate` to drop the `.venv/bin/` prefix and run `uvicorn main:app --reload` / `pytest` directly.
+| Deliverable Document | Description & Key Evidence |
+| :--- | :--- |
+| [docs/release-evidence.md](docs/release-evidence.md) | **System Verification**: 43 Pytest logs, CI Green->Red->Green proof, non-root Docker audit, and break test findings. |
+| [docs/final-ai-review.md](docs/final-ai-review.md) | **AI Audit & Governance**: Security evaluations, AI tool comparisons, human override decisions, and synthesis. |
+| [docs/ai-playbook.md](docs/ai-playbook.md) | **AI Coding Playbook**: Personal engineering rules, AI decision checklist, and workflow habits. |
+| [docs/midcourse/](docs/midcourse/) | **Mid-Course Deliverables**: User stories, interaction prompt log, reflection, verification logs, and mini-ADRs. |
 
-## Project layout
+### AI Collaboration Overview
 
-| Path | Purpose |
-|---|---|
-| `main.py` | FastAPI app: routes, in-memory store, state-transition and filter logic |
-| `schemas.py` | Pydantic v2 models, validation, tag normalization |
-| `static/index.html` | Board layout and all CSS |
-| `static/app.js` | Drag-and-drop, filters, search, tags — plain ES6+, `fetch` API |
-| `test_main.py` | Full pytest suite |
-| `docs/` | Sprint documentation and verification evidence |
+This application was developed through pair-programming collaboration with AI tools, including **Gemini / Antigravity IDE**, **Cursor IDE Chat**, **Claude Code**, and **Codex App**. AI tools assisted in scaffolding FastAPI routes, Pydantic schemas, Pytest test cases, multi-stage Docker builds, and CI workflows. Every AI code proposal underwent rigorous line-by-line inspection, verification via `pytest -v`, and container security audits. Key human governance overrides included enforcing normalized tag logic (`normalize_tags`), implementing dynamic timeline status logic (`due=overdue`, `due=soon`), and configuring non-root user execution (`USER app`) in Docker.
+
+**Core Philosophy**: *AI proposes code drafts; human engineering judgment inspects, tests, and owns all final deliverables.*
+
+---
+
+## ⚡ Core Application Features
+
+1. **Kanban REST Operations**: Complete CRUD capabilities for tasks with real-time UI synchronization.
+2. **Unidirectional Workflow Enforcer**: Tasks move strictly forward (`todo` -> `in_progress` -> `done`). Backward moves raise `HTTP 400 Bad Request`.
+3. **Pydantic Validation**: Titles (1-200 chars), descriptions (up to 2000 chars), and ISO due dates (`YYYY-MM-DD`).
+4. **Tag Management**: Up to 10 tags per task (max 30 chars each), automatically sanitized (trimmed, lowercased, deduplicated).
+5. **Timeline Filtering**: Dynamic filtering by status, tag name, and timeline status (`overdue`, `soon`, `none`), excluding completed (`done`) tasks from overdue flags.
+6. **OpenAPI Documentation**: Automatically generated interactive documentation at `/docs` (Swagger UI) and `/redoc`.
+7. **Containerization & CI**: Multi-stage Docker container build running as an unprivileged system user, with continuous integration verified on GitHub Actions.
+
+---
+
+## 🛠️ Local Environment & Running
+
+### Requirements
+- **Python**: 3.11 or higher
+- **Docker**: (Optional, for containerized execution)
+- **Git**
+
+### Installation & Local Launch
+
+```bash
+# Install required Python packages
+pip install -r requirements.txt
+
+# Option A: Run using the runner script
+python run.py
+
+# Option B: Run via Uvicorn directly
+uvicorn main:app --reload --port 8000
+```
+
+Access the application endpoints in your browser:
+- **Kanban Web Dashboard**: [http://localhost:8000/](http://localhost:8000/)
+- **Swagger Interactive API Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **ReDoc Documentation**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
+- **Service Health Check**: [http://localhost:8000/health](http://localhost:8000/health)
+
+---
+
+## 🧪 Automated Unit Testing
+
+The automated test suite consists of 43 unit tests verifying health endpoints, CRUD operations, state transition constraints, tag sanitization, and timeline calculations.
+
+To run the full test suite:
+```bash
+pytest -v
+```
+
+---
+
+## 🐳 Docker Container Deployment
+
+The repository includes a production-oriented, multi-stage `Dockerfile` with non-root security isolation (`app:appgroup`) and health checking.
+
+### Build Image
+```bash
+docker build -t task-tracker .
+```
+
+### Launch Container
+```bash
+docker run --rm -d -p 8000:8000 --name tt-app task-tracker
+```
+
+### Health & User Security Audit
+```bash
+# Check service health
+curl -s http://localhost:8000/health
+
+# Confirm non-root process user
+docker exec tt-app whoami
+# Output: app
+```
+
+### Stop Container
+```bash
+docker stop tt-app
+```
+
+---
+
+## ⚙️ CI/CD Automation Pipeline
+
+Automated testing is managed through GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml)).
+
+- **Triggers**: Pushes to `main`, `docs-update`, `'feature/**'`, and Pull Requests to `main` and `docs-update`.
+- **Environment**: Python 3.11 on `ubuntu-latest`.
+- **Pipeline Workflow**: Code checkout, Python environment configuration with pip caching, dependency installation, and `pytest -v` execution.
+
+---
+
+## 📁 Repository Directory Layout
+
+```text
+hiba-project/
+├── AGENTS.md                  # Project instructions and AI guardrails
+├── CLAUDE.md                  # Context memory for terminal agents
+├── Dockerfile                 # Multi-stage production container build
+├── .dockerignore              # Docker context exclusions
+├── README.md                  # Master project release documentation
+├── requirements.txt           # Python dependencies
+├── run.py                     # Convenience runner script
+├── main.py                    # FastAPI application, REST endpoints, static mounts
+├── schemas.py                 # Pydantic v2 schemas, enums, tag normalization
+├── test_main.py               # 43 automated unit tests
+├── static/                    # Frontend Kanban UI
+│   └── index.html             # Web UI HTML/CSS/JS dashboard
+├── .github/
+│   └── workflows/
+│       └── ci.yml             # GitHub Actions CI workflow
+└── docs/                      # Technical documentation & course deliverables
+    ├── release-evidence.md    # Release verification & audit evidence
+    ├── final-ai-review.md     # AI audit, tool comparison, and retrospective
+    ├── ai-playbook.md         # Personal AI coding playbook & decision card
+    ├── architecture.md        # System architecture synthesis & context log
+    ├── midcourse/             # Mid-course sprint documentation
+    │   ├── mini-adr.md        # Mid-course decision record
+    │   ├── prompt-log.md      # AI prompt interaction log
+    │   ├── reflection.md      # Mid-course reflection
+    │   ├── user-stories.md    # User stories for due dates & tags
+    │   └── verification.md    # Mid-course verification logs
+    └── decisions/
+        ├── in-memory-storage.md     # Task storage ADR
+        └── comments-feature-plan.md # Comments extension plan
+```
+
+---
+
+## 📌 Architectural Scope & Known Boundaries
+
+- **In-Memory Storage**: Tasks are stored in memory using Python dictionaries (`_tasks`). State resets upon application restart. (See [docs/decisions/in-memory-storage.md](docs/decisions/in-memory-storage.md)).
+- **Authentication**: User authentication is intentionally out of scope for this learning project.
+- **CORS Configuration**: Permissive CORS (`allow_origins=["*"]`) enabled for local development.
+
+---
+
+## 📄 Documentation Directory Index
+
+- [docs/release-evidence.md](docs/release-evidence.md): Consolidated release verification, test logs (43/43), CI fault injection proof, Docker security logs, break tests.
+- [docs/final-ai-review.md](docs/final-ai-review.md): Consolidated AI review, security assessment, tool comparison matrix, governance retrospective.
+- [docs/ai-playbook.md](docs/ai-playbook.md): Personal AI coding playbook, non-negotiable rules, decision checklist.
+- [AGENTS.md](AGENTS.md): Repository instructions and AI coding guardrails.
+- [CLAUDE.md](CLAUDE.md): Terminal agent operational memory.
+- [docs/architecture.md](docs/architecture.md): Architecture overview and context engineering synthesis.
+- [docs/decisions/in-memory-storage.md](docs/decisions/in-memory-storage.md): Technical decision record for task persistence.
+- [docs/decisions/comments-feature-plan.md](docs/decisions/comments-feature-plan.md): Feature architectural critique for comments extension.
+- [docs/midcourse/](docs/midcourse/): Mid-course sprint deliverables.
