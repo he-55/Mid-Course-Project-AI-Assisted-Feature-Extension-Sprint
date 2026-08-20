@@ -118,11 +118,11 @@ Conventions used below:
 
 | Criterion | Verified by |
 |---|---|
-| AC 1.1.x, 1.2.x | `test_main.py` — due-date create/update/clear/preserve/422 tests |
+| AC 1.1.x, 1.2.x | `tests/test_main.py` — due-date create/update/clear/preserve/422 tests |
 | AC 1.3.x | Manual browser check (screenshots in `docs/verification.md`) |
-| AC 1.4.1–1.4.4 | `test_main.py` — `due` filter tests incl. Done-exclusion and 422 |
+| AC 1.4.1–1.4.4 | `tests/test_main.py` — `due` filter tests incl. Done-exclusion and 422 |
 | AC 1.4.5 | Manual browser check |
-| AC 2.1.x, 2.2.x | `test_main.py` — tag create/update/normalization/422 tests |
+| AC 2.1.x, 2.2.x | `tests/test_main.py` — tag create/update/normalization/422 tests |
 | AC 2.3.x | Manual browser check |
-| AC 2.4.3, 2.4.4 (API) | `test_main.py` — `tag` filter tests incl. composition |
+| AC 2.4.3, 2.4.4 (API) | `tests/test_main.py` — `tag` filter tests incl. composition |
 | AC 2.4.1, 2.4.2, 2.4.4 (UI), 2.5.x | Manual browser check |

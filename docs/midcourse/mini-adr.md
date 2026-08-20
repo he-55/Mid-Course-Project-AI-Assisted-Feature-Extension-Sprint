@@ -42,7 +42,7 @@ Trim, lowercase, order-preserving dedupe; limits (≤ 30 chars, ≤ 10 per task)
 
 ## Consequences
 
-**Positive.** Validation lives in schemas, not routes; every rule is testable in isolation (43 passing tests, including 400/422 negative cases); the UI stays dependency-free; urgency can never desynchronize from the calendar; the API remains the single authority a non-browser client can rely on.
+**Positive.** Validation lives in schemas, not routes; every rule is testable in isolation (47 passing tests, including 400/422 negative cases); the UI stays dependency-free; urgency can never desynchronize from the calendar; the API remains the single authority a non-browser client can rely on.
 
 **Negative / accepted trade-offs.** In-memory store resets on restart (persistence is a known follow-up); duplicated filter predicates in JS must track backend changes (mitigated by tests + shared constants); whole-query substring search (no per-word AND) — a one-line upgrade point documented in the code; date-only granularity (no times/timezones) — "overdue" flips at local midnight.
 

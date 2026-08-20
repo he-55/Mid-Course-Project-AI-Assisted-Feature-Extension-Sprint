@@ -14,7 +14,7 @@ The automated suite grew with each feature increment and was run green before ev
 |---|---|---|
 | Initial Kanban board (CRUD + state rules) | 18 | 18 passed |
 | + Due dates & timeline filters | 32 | 32 passed |
-| + Tags / labels | 43 | 43 passed |
+| + Tags / labels | 43 | 43 passed (sprint baseline) |
 
 Final run:
 
@@ -26,7 +26,7 @@ Final run:
 
 ## 2. Empirical testing results (automated)
 
-Coverage by area — all PASSED in the final run of `test_main.py`:
+Coverage by area — all PASSED in the final sprint run of `tests/test_main.py`:
 
 | Area | Tests | Key assertions |
 |---|---|---|

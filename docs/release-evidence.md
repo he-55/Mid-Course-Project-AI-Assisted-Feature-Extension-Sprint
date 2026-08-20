@@ -1,41 +1,38 @@
 # Release Evidence
 
 ## Baseline
-- **Branch**: `final-project`
-- **Date**: 2026-08-21
-- **Local app run command**: `python run.py` (OR `uvicorn main:app --reload`)
-- **`/health` result**: `HTTP 200 OK {"status": "ok"}`
-- **Frontend check**: Opened `http://localhost:8000/` in Chrome browser; confirmed Kanban board columns (`To Do`, `In Progress`, `Done`), task creation modal flow, tag chip renderings, and timeline filtering options are fully visible and operational.
-- **Test command**: `pytest -v`
-- **Test result**: 43/43 Pytest unit tests passed cleanly in 0.31s (100% Green).
 
----
+- **Branch**: `final-project` (clean and tracking `origin/final-project`)
+- **Date**: 2026-08-21
+- **Local app run command**: `.venv/bin/python -m uvicorn app.main:app --reload --port 8000` or `.venv/bin/python run.py`
+- **`/health` result**: `HTTP 200 OK` with `{"status":"ok"}`
+- **Frontend check**: The baseline browser check opened `http://localhost:8000/` and confirmed the Kanban columns, inline create form, edit/delete actions, tag chips, search, and timeline filters. The current route smoke check returned 200 for `/` and `/frontend/app.js`.
+- **Test command**: `.venv/bin/python -m pytest -v`
+- **Test result**: 47/47 tests passed; one Starlette deprecation warning was emitted by the installed TestClient dependency.
 
 ## CI evidence
-- **Workflow file**: [.github/workflows/ci.yml](file:///Users/aminem/www/hiba-project/.github/workflows/ci.yml)
-- **Latest run link or note**: CI workflow is configured for GitHub Actions on branch `final-project` (and `main`); workflow steps execute dependency installation and full `pytest -v` test suite cleanly.
-- **Test command used by CI**: `pytest -v`
-- **Shortcut check**: Verified zero failure-masking shortcuts (`no continue-on-error`, `no || true`, `pytest is not skipped`). Fault injection test (injecting `assert False`) verified CI job failure on non-zero exit code.
 
----
+- **Workflow file**: [.github/workflows/ci.yml](../.github/workflows/ci.yml)
+- **Latest green run**: [final-project CI run 32417098848](https://github.com/he-55/Mid-Course-Project-AI-Assisted-Feature-Extension-Sprint/actions/runs/32417098848), completed successfully after the `app/` and `frontend/` refactor.
+- **Test command used by CI**: `pytest -v`
+- **Workflow checks**: Python 3.11 is explicit, dependencies are installed from `requirements.txt`, and pytest runs on both push and pull request. No `continue-on-error`, `|| true`, skipped pytest command, or vague Python version is present.
 
 ## Docker evidence
-- **Build command**: `docker build -t task-tracker .`
-- **Run command**: `docker run --rm -d -p 8000:8000 --name tt-app task-tracker`
-- **`/health` check**: `curl -s http://localhost:8000/health` -> `HTTP 200 OK {"status": "ok"}`
-- **Non-root check, if implemented**: Executed `docker exec tt-app whoami` -> Output: `app` (unprivileged system account created via `USER app` in runtime stage).
-- **No-baked-secrets check**: [.dockerignore](file:///Users/aminem/www/hiba-project/.dockerignore) excludes `.env`, `.git`, `.venv`, and `__pycache__`; image history inspection confirms zero environment credentials or secret keys in built layers.
 
----
+- **Build command**: `docker build -t task-tracker .`
+- **Build result**: Completed successfully for the current Dockerfile.
+- **Run command**: `docker run --rm -d -p 8000:8000 --name tt-app task-tracker`
+- **`/health` check**: `curl -i http://127.0.0.1:8000/health` returned `HTTP/1.1 200 OK` and `{"status":"ok"}`.
+- **Non-root check**: `docker exec tt-app whoami` returned `app`; the inspected container configuration also used `app`.
+- **No-baked-secrets check**: `.dockerignore` excludes `.env` and `.env.*`; the Dockerfile copies only `app/`, `frontend/`, and `run.py` into the runtime image.
+- **Runtime command**: The image starts `uvicorn app.main:app --host 0.0.0.0 --port 8000` as defined in [Dockerfile](../Dockerfile#L54).
 
 ## Documentation claim-vs-reality log
 
-| Claim checked | Evidence used | Result | Change made, if any |
-| :--- | :--- | :--- | :--- |
-| **Health Check Endpoint** | `curl -i http://localhost:8000/health` | **PASS**: Returns `HTTP 200 OK` with JSON `{"status": "ok"}` | None required; verified code in [main.py:L85](file:///Users/aminem/www/hiba-project/main.py#L85). |
-| **Unidirectional State Machine** | Attempted PATCH from `in_progress` back to `todo` | **PASS**: Server rejects invalid rollback with `HTTP 400 Bad Request` | None required; enforced by `validate_transition()` in [main.py:L48](file:///Users/aminem/www/hiba-project/main.py#L48). |
-| **Title Field Constraints** | Submitted empty title `""` and 250-char string | **PASS**: Schema validation rejects invalid titles with `HTTP 422 Unprocessable Entity` | None required; enforced by Pydantic model in [schemas.py:L61](file:///Users/aminem/www/hiba-project/schemas.py#L61). |
-| **Tag Normalization & Limits** | Sent tags `["  URGENT  ", "urgent", "backend"]` | **PASS**: Sanitized to deduplicated lowercased list `["urgent", "backend"]` | None required; logic verified in [schemas.py:L27-L45](file:///Users/aminem/www/hiba-project/schemas.py#L27-L45). |
-| **Dynamic Timeline Calculation** | Injected past due date task with status `done` | **PASS**: Completed tasks (`done`) excluded from `due=overdue` flag | None required; dynamic evaluation in [main.py:L64](file:///Users/aminem/www/hiba-project/main.py#L64). |
-| **Non-Root Container User** | Executed `docker exec tt-app whoami` | **PASS**: Container process runs as unprivileged user `app` | Updated `Dockerfile` runtime stage to specify `USER app`. |
-| **Automated CI Execution** | Inspected [.github/workflows/ci.yml](file:///Users/aminem/www/hiba-project/.github/workflows/ci.yml) | **PASS**: Pipeline executes `pytest -v` on push and PR without shortcuts | Updated `ci.yml` trigger list to include `final-project` branch. |
+| Claim checked | Evidence used | Result | Change made |
+|---|---|---|---|
+| The documented application entrypoint works | `run.py`, `app/main.py`, and the route smoke check | **PASS**: `/health`, `/`, and `/frontend/app.js` are available from the current package layout. | Updated repository instructions from `main:app`/`static` to `app.main:app`/`frontend`. |
+| The API enforces workflow and validation rules | [app/main.py](../app/main.py#L59), [app/schemas.py](../app/schemas.py#L58), and 47 pytest tests | **PASS**: backward status moves return 400; invalid payloads return 422. | Added boundary and edit-clear regression tests. |
+| The Docker image is safe to run | [Dockerfile](../Dockerfile#L28), [.dockerignore](../.dockerignore#L1), and the current build/run checks above | **PASS**: image builds, serves health 200, runs as `app`, and excludes environment files from context. | Added `.env` and `.env.*` exclusions. |
+| The CI workflow runs the full suite | [.github/workflows/ci.yml](../.github/workflows/ci.yml#L3) and the linked GitHub Actions run | **PASS**: final-project run completed successfully. | Added the current run link here. |
+| Editing can clear a description | [frontend/app.js](../frontend/app.js#L439) and [app/main.py](../app/main.py#L159) | **PASS** after correction: explicit `description: null` now clears the stored value, while an absent field preserves it. | Updated the route and added a regression test. |

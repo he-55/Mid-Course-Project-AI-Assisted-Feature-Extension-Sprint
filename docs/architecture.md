@@ -8,9 +8,9 @@ This document details the architectural layout, core backend and frontend compon
 
 ```mermaid
 flowchart TD
-    User["Web Browser Client"] -->|HTTP / JSON| WebUI["Kanban Frontend (static/index.html)"]
-    WebUI -->|REST API Requests| API["FastAPI Service (main.py)"]
-    API -->|Schema Validation| Validation["Pydantic Models (schemas.py)"]
+    User["Web Browser Client"] -->|HTTP / JSON| WebUI["Kanban Frontend (frontend/index.html)"]
+    WebUI -->|REST API Requests| API["FastAPI Service (app/main.py)"]
+    API -->|Schema Validation| Validation["Pydantic Models (app/schemas.py)"]
     API -->|In-Memory Persistence| Repository["In-Memory Task Store (_tasks dict)"]
 ```
 
@@ -18,14 +18,14 @@ flowchart TD
 
 ## 2. Component Design & Responsibilities
 
-### Backend Infrastructure (`main.py` & `schemas.py`)
-- **App Configuration**: FastAPI instance configured with metadata, healthcheck route (`/health`), root page (`/`), and static directory mount (`/static`).
+### Backend Infrastructure (`app/main.py` & `app/schemas.py`)
+- **App Configuration**: FastAPI instance configured with metadata, healthcheck route (`/health`), root page (`/`), and frontend asset mounts (`/frontend`, with `/static` compatibility fallback).
 - **REST Endpoints**: Full CRUD endpoints under `/api/tasks` supporting task creation, listing, detail retrieval, partial updates, and deletion.
 - **Validation Engine**: Pydantic v2 schemas (`TaskCreate`, `TaskUpdate`, `TaskResponse`) ensuring string length limits, tag counts (max 10), tag length (max 30), and ISO date formatting.
 - **State Guardrails**: `validate_transition()` function preventing illegal state rollbacks (`todo` -> `in_progress` -> `done`).
 
-### Frontend Interface (`static/index.html`)
-- Responsive Kanban layout providing interactive task creation modals, column views, hashtag chip tags, timeline filters, and status transitions.
+### Frontend Interface (`frontend/index.html`, `frontend/app.js`)
+- Responsive Kanban layout providing an inline task form, edit/delete actions, column views, tag chips, timeline filters, search, and status transitions.
 
 ---
 

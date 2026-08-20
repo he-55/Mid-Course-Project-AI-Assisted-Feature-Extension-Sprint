@@ -10,7 +10,7 @@ Each loop follows the same workflow: **structured prompt → AI implementation �
 
 **Prompt (summary).** Full spec for a FastAPI + Vanilla JS Kanban tracker: three columns, HTML5 drag-and-drop, strictly unidirectional state flow (`To Do → In Progress → Done`, never back to To Do, enforced on UI *and* API with HTTP 400), full CRUD, pytest suite including a health check and illegal-transition tests. Response structure mandated file-by-file output.
 
-**AI output.** `schemas.py` (Pydantic v2 models + `STATUS_ORDER` rank map), `main.py` (in-memory store, CRUD routes, `validate_transition()`), `static/index.html` + `static/app.js` (board, drag-and-drop with legal/illegal drop highlighting), `test_main.py` (18 tests), venv + requirements.
+**AI output.** The original files were later organized as `app/schemas.py`, `app/main.py`, `frontend/index.html`, `frontend/app.js`, and `tests/test_main.py` (18 tests), plus the virtual environment and requirements.
 
 **AI interpretation of ambiguity.** "Strictly unidirectional" was resolved as: any move to a lower rank is illegal (so `done → in_progress` is also blocked), forward skips (`todo → done`) allowed, same-status no-ops allowed. Accepted after review.
 
@@ -40,7 +40,7 @@ Each loop follows the same workflow: **structured prompt → AI implementation �
 
 **AI output.** First the user stories (9 stories, 30 acceptance criteria, traceability table), then the implementation to match them: `tags: list[str]` with server-side normalization (trim/lowercase/dedupe, ≤30 chars, ≤10 tags, 422 otherwise); `?tag=` case-insensitive API filter composing with `?status=`/`?due=`; deterministic-color chips (string hash → 6 hues); click-chip-to-filter with a `tag: x ✕` clear pill; tags folded into the search index. 11 new tests → 43 total.
 
-**Verification.** 43/43 passed. Browser: chip colors consistent per tag; chip click narrowed board with counter + empty states; tag filter × search composed; query "bug" matched a card by tag alone (word absent from title/description).
+**Verification.** The original sprint run was 43/43 passed. Browser: chip colors consistent per tag; chip click narrowed board with counter + empty states; tag filter × search composed; query "bug" matched a card by tag alone (word absent from title/description).
 
 **Notable ordering.** Writing testable acceptance criteria *before* implementing kept the spec honest — the doc drove the code rather than describing it after the fact.
 
@@ -48,7 +48,7 @@ Each loop follows the same workflow: **structured prompt → AI implementation �
 
 **Prompts.** Create `verification.md` and `prompt-log.md` stubs; run a Q&A to gather the human's own views; write `reflection.md` (250–500 words) from those answers; populate both logs with real evidence.
 
-**AI output.** Live break tests against the running server (illegal move → 400 with unchanged state; malformed date, empty tag, 11 tags, unknown filter → 422), captured with the final 43-test suite run in [verification.md](verification.md); a 460-word first-person reflection built from the Q&A answers; this log.
+**AI output.** Live break tests against the running server (illegal move → 400 with unchanged state; malformed date, empty tag, 11 tags, unknown filter → 422), captured with the original 43-test sprint run in [verification.md](verification.md); a 460-word first-person reflection built from the Q&A answers; this log.
 
 ---
 

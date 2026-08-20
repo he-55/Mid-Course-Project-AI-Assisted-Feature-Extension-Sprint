@@ -6,7 +6,7 @@ This document defines repository context, tech stack commands, business rules, s
 
 ## 1. Project Summary
 
-The **Task Tracker REST API** is a lightweight task management system built with Python, FastAPI, Pydantic v2, and an in-memory repository (`_tasks` dictionary). It includes a responsive Kanban Web UI served directly from the root path (`/`) and static assets mounted at `/static`.
+The **Task Tracker REST API** is a lightweight task management system built with Python 3.11+, FastAPI, Pydantic v2, and an in-memory repository (`_tasks` dictionary). It includes a responsive Kanban Web UI served directly from the root path (`/`) with assets in `frontend/` (also exposed at `/frontend`).
 
 ---
 
@@ -19,13 +19,13 @@ The **Task Tracker REST API** is a lightweight task management system built with
 | **Data Validation** | Pydantic v2 (`BaseModel`, `ConfigDict`, `@field_validator`) |
 | **Server** | Uvicorn |
 | **Testing** | pytest, httpx (Starlette TestClient) |
-| **Frontend** | Vanilla HTML5 / CSS3 / JavaScript (`static/index.html`) |
+| **Frontend** | Vanilla HTML5 / CSS3 / JavaScript (`frontend/index.html`, `frontend/app.js`) |
 
 ### Execution Commands (Run from Repository Root)
-- **Install Dependencies**: `pip install -r requirements.txt`
-- **Run API & Web UI Locally**: `python -m uvicorn main:app --reload --port 8000` OR `uvicorn main:app --reload`
-- **Run Unit Test Suite**: `pytest -v` OR `.venv/bin/pytest -v`
-- **Run Docker Container**: `docker build -t task-tracker .` && `docker run --rm -d -p 8000:8000 --name tt-dev task-tracker`
+- **Install Dependencies**: `python3 -m venv .venv` then `.venv/bin/python -m pip install -r requirements.txt`
+- **Run API & Web UI Locally**: `.venv/bin/python -m uvicorn app.main:app --reload --port 8000` OR `.venv/bin/python run.py`
+- **Run Unit Test Suite**: `.venv/bin/python -m pytest -v`
+- **Run Docker Container**: `docker build -t task-tracker .` then `docker run --rm -d -p 8000:8000 --name tt-app task-tracker`
 
 ---
 
@@ -45,7 +45,7 @@ The **Task Tracker REST API** is a lightweight task management system built with
    - **Overdue (`due=overdue`)**: `due_date < date.today()` and `status != done`. Completed tasks (`done`) are never marked overdue.
    - **Due Soon (`due=soon`)**: `due_date` within today to today + 2 days (`DUE_SOON_WINDOW_DAYS = 2`) and `status != done`.
    - **No Due Date (`due=none`)**: Tasks without a due date set.
-6. **In-Memory Storage**: Tasks are stored in `_tasks: dict[int, dict]` in `main.py` using `itertools.count(1)` for sequential integer IDs starting at 1. `reset_store()` clears tasks for test isolation.
+6. **In-Memory Storage**: Tasks are stored in `_tasks: dict[int, dict]` in `app/main.py` using `itertools.count(1)` for sequential integer IDs starting at 1. `reset_store()` clears tasks for test isolation.
 
 ---
 
@@ -54,10 +54,10 @@ The **Task Tracker REST API** is a lightweight task management system built with
 1. **Docs-First & Read-Only Default**:
    - Primary deliverables live in `docs/`.
    - AI assistants must prefer read-only analysis and inspection over modifying source code.
-   - Do NOT modify core files (`main.py`, `schemas.py`, `test_main.py`, `static/`) unless explicitly instructed for a specific minimal fix.
+   - Do NOT modify core files (`app/main.py`, `app/schemas.py`, `tests/test_main.py`, `frontend/`) unless explicitly instructed for a specific minimal fix. Any such fix must be explained in `docs/final-ai-review.md`.
 2. **One Task Per Thread**: Keep agent conversations focused on a single bounded objective. Do not mix setup, security audits, feature planning, and playbook drafting in one conversation thread.
 3. **Repo-Grounded Evidence**:
-   - Always cite actual file paths (`main.py`, `schemas.py`, `tests/test_main.py`, `static/index.html`, `Dockerfile`, `.dockerignore`, `.github/workflows/ci.yml`, `README.md`) and line numbers.
+   - Always cite actual file paths (`app/main.py`, `app/schemas.py`, `tests/test_main.py`, `frontend/index.html`, `Dockerfile`, `.dockerignore`, `.github/workflows/ci.yml`, `README.md`) and line numbers.
    - If a behavior, command, or file is not visible, mark it as `[NOT VISIBLE]` or `[UNCONFIRMED]` rather than guessing or inferring from external conventions.
 
 ---

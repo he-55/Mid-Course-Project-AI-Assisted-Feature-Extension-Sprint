@@ -156,7 +156,8 @@ def update_task(task_id: int, payload: TaskUpdate) -> dict:
         task["status"] = payload.status
     if payload.title is not None:
         task["title"] = payload.title
-    if payload.description is not None:
+    # An explicit null clears the description; an absent field preserves it.
+    if "description" in payload.model_fields_set:
         task["description"] = payload.description
     # An explicit "due_date": null clears the date; an absent field leaves it alone.
     if "due_date" in payload.model_fields_set:

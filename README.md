@@ -16,24 +16,23 @@ Branch reviewed: `final-project`
 
 ### How to run locally
 ```bash
-pip install -r requirements.txt
-python run.py
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python run.py
 # OR
-uvicorn app.main:app --reload
+.venv/bin/python -m uvicorn app.main:app --reload
 ```
 
 ### How to run tests
 ```bash
-pytest -v
-# OR
-.venv/bin/pytest -v
+.venv/bin/python -m pytest -v
 ```
 
 ### How to run with Docker
 ```bash
 docker build -t task-tracker .
 docker run --rm -d -p 8000:8000 --name tt-app task-tracker
-curl -s http://localhost:8000/health
+curl -i http://localhost:8000/health
 ```
 
 ### Evidence files
@@ -43,8 +42,8 @@ curl -s http://localhost:8000/health
 
 ### AI assistance summary
 AI helped draft or review: CI workflow, Docker multi-stage setup, Pydantic schemas, Pytest unit test expansion, security audits, and documentation synthesis.  
-I verified the work by: executing `pytest -v` (43/43 tests passing), verifying Docker container health and `whoami` non-root execution (`app`), auditing git index for secret/junk file leakage, and running cURL endpoint checks.  
-One AI suggestion I rejected or corrected: Rejected AI proposal to run container as root (`USER root`); introduced non-root user `app:appgroup` in runtime stage of [Dockerfile](Dockerfile#L34). Also rejected stored boolean `is_overdue` in state dictionary in favor of dynamic evaluations in [main.py](main.py#L26-L45).
+I verified the work by: executing the full test suite, checking the root/frontend/health routes, verifying Docker container health and `whoami` non-root execution (`app`), auditing tracked files for secret leakage, and running endpoint checks.
+One AI suggestion I rejected or corrected: I retained the documented in-memory store and dynamic due-date predicates instead of adding a database or storing a stale overdue flag; see [app/main.py](app/main.py#L38) and [app/main.py](app/main.py#L75).
 
 ---
 
@@ -56,7 +55,7 @@ One AI suggestion I rejected or corrected: Rejected AI proposal to run container
 | **Repository URL** | [https://github.com/he-55/Mid-Course-Project-AI-Assisted-Feature-Extension-Sprint](https://github.com/he-55/Mid-Course-Project-AI-Assisted-Feature-Extension-Sprint) |
 | **Backend Stack** | Python 3.11+, FastAPI 0.110+, Pydantic v2, Uvicorn |
 | **Frontend Stack** | HTML5, Vanilla CSS3, JavaScript (Kanban Dashboard) |
-| **Test Suite Status** | 43/43 Pytest Unit Tests Passing (100% Green) |
+| **Test Suite Status** | 47/47 Pytest Unit Tests Passing (100% Green) |
 
 ---
 
@@ -82,14 +81,15 @@ One AI suggestion I rejected or corrected: Rejected AI proposal to run container
 ### Installation & Local Launch
 
 ```bash
-# Install required Python packages
-pip install -r requirements.txt
+# Create an isolated environment and install required packages
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
 
 # Option A: Run using the runner script
-python run.py
+.venv/bin/python run.py
 
 # Option B: Run via Uvicorn directly
-uvicorn app.main:app --reload --port 8000
+.venv/bin/python -m uvicorn app.main:app --reload --port 8000
 ```
 
 Access the application endpoints in your browser:
@@ -102,7 +102,7 @@ Access the application endpoints in your browser:
 
 ## 🧪 Automated Unit Testing
 
-The automated test suite consists of 43 unit tests verifying health endpoints, CRUD operations, state transition constraints, tag sanitization, and timeline calculations.
+The automated test suite consists of 47 unit tests verifying health endpoints, CRUD operations, state transition constraints, validation boundaries, edit semantics, tag sanitization, and timeline calculations.
 
 To run the full test suite:
 ```bash
@@ -173,7 +173,7 @@ hiba-project/
 │   └── app.js                 # Client-side JavaScript logic
 ├── tests/                     # Unit test suite
 │   ├── conftest.py            # Test configuration & path setup
-│   └── test_main.py           # 43 automated unit tests
+│   └── test_main.py           # 47 automated unit tests
 ├── .github/
 │   └── workflows/
 │       └── ci.yml             # GitHub Actions CI workflow
@@ -199,13 +199,13 @@ hiba-project/
 
 - **In-Memory Storage**: Tasks are stored in memory using Python dictionaries (`_tasks`). State resets upon application restart. (See [docs/decisions/in-memory-storage.md](docs/decisions/in-memory-storage.md)).
 - **Authentication**: User authentication is intentionally out of scope for this learning project.
-- **CORS Configuration**: Permissive CORS (`allow_origins=["*"]`) enabled for local development.
+- **CORS Configuration**: No CORS middleware is configured; the bundled UI is served from the same origin as the API.
 
 ---
 
 ## 📄 Documentation Directory Index
 
-- [docs/release-evidence.md](docs/release-evidence.md): Consolidated release verification, test logs (43/43), CI fault injection proof, Docker security logs, break tests.
+- [docs/release-evidence.md](docs/release-evidence.md): Consolidated release verification, current test results, CI run, Docker checks, and documentation claim audit.
 - [docs/final-ai-review.md](docs/final-ai-review.md): Consolidated AI review, security assessment, tool comparison matrix, governance retrospective.
 - [docs/ai-playbook.md](docs/ai-playbook.md): Personal AI coding playbook, non-negotiable rules, decision checklist.
 - [AGENTS.md](AGENTS.md): Repository instructions and AI coding guardrails.

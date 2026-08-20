@@ -6,9 +6,9 @@ This file provides workspace context and operational rules for AI coding assista
 
 ## 1. Key Commands
 
-- **Install Dependencies**: `pip install -r requirements.txt`
-- **Run Application**: `python run.py` OR `uvicorn main:app --reload`
-- **Run Unit Tests**: `pytest -v`
+- **Install Dependencies**: `python3 -m venv .venv` then `.venv/bin/python -m pip install -r requirements.txt`
+- **Run Application**: `.venv/bin/python run.py` OR `.venv/bin/python -m uvicorn app.main:app --reload`
+- **Run Unit Tests**: `.venv/bin/python -m pytest -v`
 - **Build Container**: `docker build -t task-tracker .`
 - **Run Container**: `docker run --rm -d -p 8000:8000 --name tt-app task-tracker`
 
@@ -16,10 +16,10 @@ This file provides workspace context and operational rules for AI coding assista
 
 ## 2. Core Architecture & Files
 
-- `main.py`: Application entrypoint, FastAPI instance, REST routes, static files mounting (`/static`), `/health` endpoint.
-- `schemas.py`: Pydantic v2 schemas (`TaskCreate`, `TaskUpdate`, `TaskResponse`), enums (`TaskStatus`, `DueFilter`), tag normalization.
-- `tests/test_main.py`: Pytest suite containing 43 unit tests covering health, CRUD, status transitions, tag validation, and timeline filters.
-- `static/`: HTML/CSS/JS frontend files (`index.html`).
+- `app/main.py`: Application entrypoint, FastAPI instance, REST routes, frontend mounting, `/health` endpoint.
+- `app/schemas.py`: Pydantic v2 schemas (`TaskCreate`, `TaskUpdate`, `TaskResponse`), enums (`TaskStatus`, `DueFilter`), tag normalization.
+- `tests/test_main.py`: Pytest suite containing 47 unit tests covering health, CRUD, status transitions, validation boundaries, tag validation, and timeline filters.
+- `frontend/`: HTML/CSS/JS frontend files (`index.html`, `app.js`).
 - `docs/`: System documentation, release evidence, AI review, and midcourse deliverables.
 
 ---

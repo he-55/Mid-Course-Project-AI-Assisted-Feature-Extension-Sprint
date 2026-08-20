@@ -58,6 +58,22 @@ def test_create_task_requires_title():
     assert response.status_code == 422
 
 
+def test_create_task_enforces_title_and_description_max_lengths():
+    response = client.post("/api/tasks", json={"title": "x" * 201})
+    assert response.status_code == 422
+
+    response = client.post(
+        "/api/tasks", json={"title": "Valid", "description": "x" * 2001}
+    )
+    assert response.status_code == 422
+
+
+def test_frontend_and_health_routes_are_available():
+    assert client.get("/").status_code == 200
+    assert client.get("/frontend/app.js").status_code == 200
+    assert client.get("/health").json() == {"status": "ok"}
+
+
 # --- Read ------------------------------------------------------------------
 
 
@@ -114,6 +130,13 @@ def test_update_task_details():
     assert body["status"] == "todo"
 
 
+def test_update_can_clear_description_with_explicit_null():
+    task = make_task("Clear description", "Remove this")
+    response = client.patch(f"/api/tasks/{task['id']}", json={"description": None})
+    assert response.status_code == 200
+    assert response.json()["description"] is None
+
+
 def test_update_missing_task_returns_404():
     response = client.patch("/api/tasks/999", json={"title": "Ghost"})
     assert response.status_code == 404
@@ -144,6 +167,13 @@ def test_forward_transitions_allowed():
     assert response.status_code == 200
     assert response.json()["status"] == "in_progress"
 
+    response = client.patch(f"/api/tasks/{task['id']}", json={"status": "done"})
+    assert response.status_code == 200
+    assert response.json()["status"] == "done"
+
+
+def test_direct_todo_to_done_transition_is_allowed():
+    task = make_task("Skip a column")
     response = client.patch(f"/api/tasks/{task['id']}", json={"status": "done"})
     assert response.status_code == 200
     assert response.json()["status"] == "done"
@@ -237,11 +267,12 @@ def test_update_due_date():
 
 
 def test_update_with_invalid_due_date_returns_422():
-    task = make_task("Still valid")
+    task = make_task_due("Still valid", "2027-01-15")
     response = client.patch(
         f"/api/tasks/{task['id']}", json={"due_date": "soonish"}
     )
     assert response.status_code == 422
+    assert client.get(f"/api/tasks/{task['id']}").json()["due_date"] == "2027-01-15"
 
 
 def test_clear_due_date_with_explicit_null():
