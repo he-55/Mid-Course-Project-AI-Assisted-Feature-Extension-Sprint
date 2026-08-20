@@ -67,8 +67,6 @@ const updateTask = (id, payload) =>
 const deleteTask = (id) => apiRequest(`${API_URL}/${id}`, { method: "DELETE" });
 
 // --- Due-date helpers ------------------------------------------------------
-// Due dates are "YYYY-MM-DD" strings; comparing them lexicographically avoids
-// timezone pitfalls of Date parsing.
 
 function localISODate(offsetDays = 0) {
   const d = new Date();
@@ -104,14 +102,12 @@ function formatDueDate(isoDate) {
 
 const TAG_HUE_COUNT = 6;
 
-// "frontend, API,api" -> ["frontend", "api"] (server normalizes again).
 function parseTagsInput(raw) {
   return [...new Set(
     raw.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean)
   )];
 }
 
-// Deterministic tag -> hue class so a tag has the same color everywhere.
 function tagHueClass(tag) {
   let hash = 0;
   for (const char of tag) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
@@ -154,7 +150,6 @@ function buildCard(task) {
   card.draggable = true;
   card.dataset.taskId = String(task.id);
   card.dataset.status = task.status;
-  // Raw values for search matching and highlight re-rendering.
   card.dataset.title = task.title;
   card.dataset.description = task.description || "";
   card.dataset.searchText =
@@ -267,18 +262,9 @@ async function renderBoard() {
     for (const task of columnTasks) list.appendChild(buildCard(task));
   }
 
-  // Search runs on the freshly rendered cards: visibility, highlights,
-  // per-column counts, empty states, and the match counter.
   applySearch();
 }
 
-// --- Search ----------------------------------------------------------------
-
-/**
- * Render `text` into `element`, wrapping case-insensitive occurrences of
- * `query` in <mark class="search-hit">. Built with DOM nodes (no innerHTML),
- * so task content is never parsed as HTML.
- */
 function renderHighlighted(element, text, query) {
   element.replaceChildren();
   if (!query) {
@@ -299,11 +285,6 @@ function renderHighlighted(element, text, query) {
   element.append(text.slice(cursor));
 }
 
-/**
- * Apply the current search query on top of the already-rendered board
- * (pill filters decide which cards exist; search decides which are shown).
- * Pure DOM pass — no refetch, safe to call after every render or keystroke.
- */
 function applySearch() {
   const query = searchInput.value.trim().toLowerCase();
   searchClear.hidden = query === "";
@@ -366,7 +347,6 @@ searchClear.addEventListener("click", () => {
   searchInput.focus();
 });
 
-// "/" (outside inputs) or Ctrl/Cmd+K focuses the search field.
 document.addEventListener("keydown", (event) => {
   const isModK = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k";
   const isSlash =
@@ -385,8 +365,6 @@ document.addEventListener("keydown", (event) => {
   searchInput.focus();
   searchInput.select();
 });
-
-// --- Drag and drop ---------------------------------------------------------
 
 function isLegalMove(fromStatus, toStatus) {
   return STATUS_ORDER[toStatus] >= STATUS_ORDER[fromStatus];
@@ -407,7 +385,6 @@ for (const column of board.querySelectorAll(".column")) {
     column.classList.toggle("drop-allowed", legal);
     column.classList.toggle("drop-forbidden", !legal);
     if (legal) {
-      // Only legal targets accept the drop.
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
     }
@@ -438,8 +415,6 @@ for (const column of board.querySelectorAll(".column")) {
     renderBoard();
   });
 }
-
-// --- Actions ---------------------------------------------------------------
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -512,7 +487,5 @@ function showToast(message) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.classList.remove("visible"), 3500);
 }
-
-// --- Init ------------------------------------------------------------------
 
 renderBoard();

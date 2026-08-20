@@ -11,6 +11,8 @@ This document provides the official AI governance audit, AGENTS.md guardrail con
 
 *Detailed Confirmation*: Adherence to all repository guardrails in [AGENTS.md](file:///Users/aminem/www/hiba-project/AGENTS.md) was strictly maintained throughout development. AI tools operated under read-only default constraints, core code was protected, and every code edit was empirically verified.
 
+*Repository Structure Context*: Note that there is no `app/` directory or `frontend/` directory in this codebase. `main.py` and `schemas.py` are located at the repository root, and the Kanban frontend resides in `static/` (`static/index.html`). The guardrail restricting unexpected source/frontend edits applies directly to `main.py`, `schemas.py`, and `static/`. Zero unexpected changes were made to these core files.
+
 ---
 
 ## AI code review mini-log

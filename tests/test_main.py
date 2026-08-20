@@ -5,7 +5,7 @@ from datetime import date, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
-from main import DUE_SOON_WINDOW_DAYS, app, reset_store
+from app.main import DUE_SOON_WINDOW_DAYS, app, reset_store
 
 client = TestClient(app)
 

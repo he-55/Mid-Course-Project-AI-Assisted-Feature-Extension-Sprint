@@ -33,9 +33,10 @@ WORKDIR /app
 # Copy virtualenv from builder stage
 COPY --from=builder /opt/venv /opt/venv
 
-# Copy application source code and static frontend files
-COPY main.py schemas.py /app/
-COPY static/ /app/static/
+# Copy application source code, app package, and frontend files
+COPY app/ /app/app/
+COPY frontend/ /app/frontend/
+COPY run.py /app/
 
 # Set appropriate directory ownership for non-root user
 RUN chown -R app:appgroup /app
@@ -50,4 +51,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
 # Start FastAPI server using Uvicorn without reload
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

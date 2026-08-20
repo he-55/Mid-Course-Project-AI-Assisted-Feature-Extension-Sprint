@@ -19,7 +19,7 @@ Branch reviewed: `final-project`
 pip install -r requirements.txt
 python run.py
 # OR
-uvicorn main:app --reload
+uvicorn app.main:app --reload
 ```
 
 ### How to run tests
@@ -89,7 +89,7 @@ pip install -r requirements.txt
 python run.py
 
 # Option B: Run via Uvicorn directly
-uvicorn main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8000
 ```
 
 Access the application endpoints in your browser:
@@ -164,13 +164,16 @@ hiba-project/
 ├── README.md                  # Master project release documentation
 ├── requirements.txt           # Python dependencies
 ├── run.py                     # Convenience runner script
-├── main.py                    # FastAPI application, REST endpoints, static mounts
-├── schemas.py                 # Pydantic v2 schemas, enums, tag normalization
-├── tests/                    # Unit test suite
+├── app/                       # Backend application package
+│   ├── __init__.py            # Package initializer
+│   ├── main.py                # FastAPI application, REST endpoints, frontend mounts
+│   └── schemas.py             # Pydantic v2 schemas, enums, tag normalization
+├── frontend/                  # Frontend Kanban UI
+│   ├── index.html             # Web UI HTML/CSS/JS dashboard
+│   └── app.js                 # Client-side JavaScript logic
+├── tests/                     # Unit test suite
 │   ├── conftest.py            # Test configuration & path setup
 │   └── test_main.py           # 43 automated unit tests
-├── static/                    # Frontend Kanban UI
-│   └── index.html             # Web UI HTML/CSS/JS dashboard
 ├── .github/
 │   └── workflows/
 │       └── ci.yml             # GitHub Actions CI workflow

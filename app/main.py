@@ -1,6 +1,7 @@
 """FastAPI Kanban task tracker with strict unidirectional state transitions."""
 
 import itertools
+import os
 from datetime import date, timedelta
 from typing import Optional
 
@@ -8,14 +9,24 @@ from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from schemas import (
-    STATUS_ORDER,
-    DueFilter,
-    TaskCreate,
-    TaskResponse,
-    TaskStatus,
-    TaskUpdate,
-)
+try:
+    from app.schemas import (
+        STATUS_ORDER,
+        DueFilter,
+        TaskCreate,
+        TaskResponse,
+        TaskStatus,
+        TaskUpdate,
+    )
+except ImportError:
+    from schemas import (
+        STATUS_ORDER,
+        DueFilter,
+        TaskCreate,
+        TaskResponse,
+        TaskStatus,
+        TaskUpdate,
+    )
 
 app = FastAPI(title="Kanban Task Tracker", version="1.1.0")
 
@@ -164,10 +175,22 @@ def delete_task(task_id: int) -> None:
 
 # --- Frontend --------------------------------------------------------------
 
+# Resolve static/frontend directory path flexibly
+_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_FRONTEND_DIR = os.path.join(_BASE_DIR, "frontend")
+_STATIC_DIR = os.path.join(_BASE_DIR, "static")
+
+_SERVE_DIR = _FRONTEND_DIR if os.path.exists(_FRONTEND_DIR) else _STATIC_DIR
+
 
 @app.get("/", include_in_schema=False)
 def index() -> FileResponse:
-    return FileResponse("static/index.html")
+    return FileResponse(os.path.join(_SERVE_DIR, "index.html"))
 
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+if os.path.exists(_FRONTEND_DIR):
+    app.mount("/frontend", StaticFiles(directory=_FRONTEND_DIR), name="frontend")
+if os.path.exists(_STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+elif os.path.exists(_SERVE_DIR):
+    app.mount("/static", StaticFiles(directory=_SERVE_DIR), name="static")
