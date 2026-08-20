@@ -2,9 +2,49 @@
 
 A production-grade Task Tracker application powered by Python 3.11, FastAPI, Pydantic v2, and a responsive Vanilla JavaScript Kanban interface.
 
-> **Active Branch**: `final-project`  
-> **Course**: AI-Assisted Coding (End-of-Course Project)  
-> **GitHub Repository**: [https://github.com/he-55/Mid-Course-Project-AI-Assisted-Feature-Extension-Sprint](https://github.com/he-55/Mid-Course-Project-AI-Assisted-Feature-Extension-Sprint)
+---
+
+## Final Project
+
+Branch reviewed: `final-project`
+
+### What this submission demonstrates
+- Existing Task Tracker app still runs inside the intended course scope.
+- CI runs the pytest suite on push and/or pull request.
+- Docker image builds and runs with /health returning 200.
+- AI review, security, and ownership evidence is in docs/.
+
+### How to run locally
+```bash
+pip install -r requirements.txt
+python run.py
+# OR
+uvicorn main:app --reload
+```
+
+### How to run tests
+```bash
+pytest -v
+# OR
+.venv/bin/pytest -v
+```
+
+### How to run with Docker
+```bash
+docker build -t task-tracker .
+docker run --rm -d -p 8000:8000 --name tt-app task-tracker
+curl -s http://localhost:8000/health
+```
+
+### Evidence files
+- [docs/release-evidence.md](docs/release-evidence.md)
+- [docs/final-ai-review.md](docs/final-ai-review.md)
+- [docs/ai-playbook.md](docs/ai-playbook.md)
+
+### AI assistance summary
+AI helped draft or review: CI workflow, Docker multi-stage setup, Pydantic schemas, Pytest unit test expansion, security audits, and documentation synthesis.  
+I verified the work by: executing `pytest -v` (43/43 tests passing), verifying Docker container health and `whoami` non-root execution (`app`), auditing git index for secret/junk file leakage, and running cURL endpoint checks.  
+One AI suggestion I rejected or corrected: Rejected AI proposal to run container as root (`USER root`); introduced non-root user `app:appgroup` in runtime stage of [Dockerfile](Dockerfile#L34). Also rejected stored boolean `is_overdue` in state dictionary in favor of dynamic evaluations in [main.py](main.py#L26-L45).
 
 ---
 
@@ -18,40 +58,6 @@ A production-grade Task Tracker application powered by Python 3.11, FastAPI, Pyd
 | **Frontend Stack** | HTML5, Vanilla CSS3, JavaScript (Kanban Dashboard) |
 | **Test Suite Status** | 43/43 Pytest Unit Tests Passing (100% Green) |
 
-### Quick Start Commands
-
-```bash
-# 1. Install dependencies
-pip install -r requirements.txt
-
-# 2. Launch API and Web UI server
-python run.py
-# OR
-uvicorn main:app --reload
-
-# 3. Execute unit test suite
-pytest -v
-
-# 4. Containerized Execution
-docker build -t task-tracker .
-docker run --rm -d -p 8000:8000 --name tt-app task-tracker
-```
-
-### Essential Project Deliverables
-
-| Deliverable Document | Description & Key Evidence |
-| :--- | :--- |
-| [docs/release-evidence.md](docs/release-evidence.md) | **System Verification**: 43 Pytest logs, CI Green->Red->Green proof, non-root Docker audit, and break test findings. |
-| [docs/final-ai-review.md](docs/final-ai-review.md) | **AI Audit & Governance**: Security evaluations, AI tool comparisons, human override decisions, and synthesis. |
-| [docs/ai-playbook.md](docs/ai-playbook.md) | **AI Coding Playbook**: Personal engineering rules, AI decision checklist, and workflow habits. |
-| [docs/midcourse/](docs/midcourse/) | **Mid-Course Deliverables**: User stories, interaction prompt log, reflection, verification logs, and mini-ADRs. |
-
-### AI Collaboration Overview
-
-This application was developed through pair-programming collaboration with AI tools, including **Gemini / Antigravity IDE**, **Cursor IDE Chat**, **Claude Code**, and **Codex App**. AI tools assisted in scaffolding FastAPI routes, Pydantic schemas, Pytest test cases, multi-stage Docker builds, and CI workflows. Every AI code proposal underwent rigorous line-by-line inspection, verification via `pytest -v`, and container security audits. Key human governance overrides included enforcing normalized tag logic (`normalize_tags`), implementing dynamic timeline status logic (`due=overdue`, `due=soon`), and configuring non-root user execution (`USER app`) in Docker.
-
-**Core Philosophy**: *AI proposes code drafts; human engineering judgment inspects, tests, and owns all final deliverables.*
-
 ---
 
 ## ⚡ Core Application Features
@@ -62,7 +68,7 @@ This application was developed through pair-programming collaboration with AI to
 4. **Tag Management**: Up to 10 tags per task (max 30 chars each), automatically sanitized (trimmed, lowercased, deduplicated).
 5. **Timeline Filtering**: Dynamic filtering by status, tag name, and timeline status (`overdue`, `soon`, `none`), excluding completed (`done`) tasks from overdue flags.
 6. **OpenAPI Documentation**: Automatically generated interactive documentation at `/docs` (Swagger UI) and `/redoc`.
-7. **Containerization & CI**: Multi-stage Docker container build running as an unprivileged system user, with continuous integration verified on GitHub Actions.
+7. **Containerization & CI**: Multi-stage Docker container build running as an unprivileged system user (`USER app`), with continuous integration verified on GitHub Actions.
 
 ---
 
@@ -140,7 +146,7 @@ docker stop tt-app
 
 Automated testing is managed through GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml)).
 
-- **Triggers**: Pushes to `main`, `docs-update`, `'feature/**'`, and Pull Requests to `main` and `docs-update`.
+- **Triggers**: Pushes to `main`, `final-project`, `docs-update`, `'feature/**'`, and Pull Requests to `main`, `final-project`, `docs-update`.
 - **Environment**: Python 3.11 on `ubuntu-latest`.
 - **Pipeline Workflow**: Code checkout, Python environment configuration with pip caching, dependency installation, and `pytest -v` execution.
 
@@ -154,6 +160,7 @@ hiba-project/
 ├── CLAUDE.md                  # Context memory for terminal agents
 ├── Dockerfile                 # Multi-stage production container build
 ├── .dockerignore              # Docker context exclusions
+├── .gitignore                 # Git context exclusions
 ├── README.md                  # Master project release documentation
 ├── requirements.txt           # Python dependencies
 ├── run.py                     # Convenience runner script

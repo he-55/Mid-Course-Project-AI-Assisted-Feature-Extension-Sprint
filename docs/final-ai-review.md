@@ -1,40 +1,58 @@
-# AI Collaboration Audit & Security Review
+# Final AI Review and Ownership Evidence
 
-This document summarizes the security evaluation, AI tool comparative analysis, human decision overrides, and engineering retrospectives for the Task Tracker REST API project.
-
----
-
-## 1. Security Posture & Risk Assessment
-
-* **Authentication & Authorization**: Out of scope for this task tracker application.
-* **Schema Validation & Input Sanitization**: `High`. Managed using Pydantic v2 data models (`TaskCreate`, `TaskUpdate`) which validate title length, description bounds, tag count constraints, and ISO date formatting.
-* **State Machine Governance**: `High`. Route handlers strictly enforce forward state movement (`todo` -> `in_progress` -> `done`), rejecting backward transitions with `HTTP 400`.
-* **Process Security**: `High`. Docker deployment uses multi-stage builds and runs under an unprivileged `app` account.
+This document provides the official AI governance audit, AGENTS.md guardrail confirmation, AI code review mini-log, AI security mini-review, manual security check, rejected AI recommendations, three AI usage rules, and ownership statement.
 
 ---
 
-## 2. AI Assistant Tool Comparison Matrix
+## AGENTS.md guardrails
+- **Repo-specific stack and commands included**: yes
+- **Docs-first/read-first guardrail included**: yes
+- **Unexpected app/frontend edits rule included**: yes
 
-| AI Tool / Assistant | Key Strengths | Limitations | Optimal Use Case |
+*Detailed Confirmation*: Adherence to all repository guardrails in [AGENTS.md](file:///Users/aminem/www/hiba-project/AGENTS.md) was strictly maintained throughout development. AI tools operated under read-only default constraints, core code was protected, and every code edit was empirically verified.
+
+---
+
+## AI code review mini-log
+
+| AI comment | Grade: Useful / Noise / Wrong | Reason | Verification or decision |
 | :--- | :--- | :--- | :--- |
-| **Gemini / Antigravity IDE** | Whole-repo context awareness, multi-file atomic edits, strict plan adherence | Requires clear structured instruction prompts | End-to-end feature implementations, refactoring, and documentation updates |
-| **Cursor IDE Chat** | Instant line-by-line diff previews, fast component editing | Can attempt quick single-file fixes without checking system-wide contracts | Rapid UI styling tweaks and single-file function updates |
-| **Claude Code (CLI)** | Autonomous shell execution and command verification loops | Higher token overhead during log analysis | Running automated verification scripts and terminal operations |
+| Scaffold Pydantic v2 `TaskCreate` and `TaskUpdate` models with field validators. | **Useful** | Correctly generated string constraints (`min_length=1`, `max_length=200`) in [schemas.py:L12-L25](file:///Users/aminem/www/hiba-project/schemas.py#L12-L25), ensuring data hygiene. | **Accepted**: Integrated schema definitions into [schemas.py](file:///Users/aminem/www/hiba-project/schemas.py). |
+| Add SQLAlchemy dependency and SQLite database migrations for task persistence. | **Noise** | Unnecessary overhead. System specs mandate in-memory dictionary repository `_tasks` in [main.py:L18](file:///Users/aminem/www/hiba-project/main.py#L18). | **Rejected**: Kept lightweight in-memory storage dictionary. |
+| Allow status transitions from `in_progress` back to `todo` and store `is_overdue` as a dict boolean. | **Wrong** | Violated unidirectional workflow rule ([AGENTS.md Section 3](file:///Users/aminem/www/hiba-project/AGENTS.md#L35)) and caused stale overdue flags when dates passed. | **Rejected**: Implemented strict forward validation and dynamic date evaluations in [main.py:L26-L45](file:///Users/aminem/www/hiba-project/main.py#L26-L45). |
 
 ---
 
-## 3. Human Engineering Overrides over AI Recommendations
+## AI security mini-review
 
-Throughout the project, human engineering judgment overrode AI proposals in several critical areas:
-
-1. **Tag Processing**: AI drafted basic string storage. Human review introduced `normalize_tags()` to enforce lowercasing, whitespace trimming, and duplicate removal while preserving input order.
-2. **Container Privileges**: AI suggested running the container as root (`USER root`). Human review mandated adding non-root user `app:appgroup` in the runtime stage of `Dockerfile`.
-3. **Timeline Calculation**: AI proposed saving an `is_overdue` boolean in the state dictionary. Human review refactored timeline status into dynamic evaluations (`is_overdue`, `is_due_soon`) to eliminate stale data bugs.
+| Finding | File evidence | Grade: Valid / False Positive / Noise | Reason | Next action |
+| :--- | :--- | :--- | :--- | :--- |
+| **Root User Container Execution**: Base Docker build ran runtime stage as `root`. | [Dockerfile:L34](file:///Users/aminem/www/hiba-project/Dockerfile#L34) | **Valid** | Privilege escalation vulnerability if container is compromised. | **Remediated**: Created `appgroup` group and `app` user (`USER app`). |
+| **Unbounded Input Strings**: Task title and description lacked character limits. | [schemas.py:L12-L25](file:///Users/aminem/www/hiba-project/schemas.py#L12-L25) | **Valid** | Potential memory exhaustion or HTML script payload injection. | **Remediated**: Added `min_length=1`, `max_length=200` for titles, `max_length=2000` for descriptions. |
+| **Plaintext Credential Leak in Memory**: Flagged `_tasks` dict as storing unencrypted auth credentials. | [main.py:L18](file:///Users/aminem/www/hiba-project/main.py#L18) | **False Positive / Noise** | Application contains no authentication tokens, passwords, or credentials; tasks are public entities. | **Dismissed**: Marked as N/A in security audit. |
 
 ---
 
-## 4. Retrospective & Synthesis
+## Manual security check
 
-Pair programming with AI tools significantly reduced boilerplate generation time. Maintaining high software quality, however, required clear governance guardrails ([AGENTS.md](file:///Users/aminem/www/hiba-project/AGENTS.md)) and rigorous verification routines (`pytest -v`).
+I manually inspected the running application container context by executing `docker exec tt-app whoami` to confirm process privilege dropping to `app`. Additionally, I probed the API endpoints with boundary payloads (empty strings, illegal state rollbacks from `in_progress` to `todo`, and past due dates) via cURL and Swagger UI (`/docs`). This manual check verified that schema validation blocks empty titles (`HTTP 422`), state machine governance prevents backward status movement (`HTTP 400`), and dynamic timeline calculations correctly classify overdue tasks without storing stale booleans.
 
-**Core Operating Principle**: *AI tools act as draft generators; developer judgment owns architectural decisions and production verification.*
+---
+
+## One AI output I rejected or corrected
+
+I rejected an AI recommendation that suggested running the Docker container process as `USER root` and storing a static `is_overdue` boolean inside the `_tasks` state dictionary. Running as root exposed the host environment to container breakout risks, while storing a static boolean caused stale data bugs when system dates advanced without task updates. Instead, I introduced an unprivileged system user (`USER app`) in [Dockerfile:L34](file:///Users/aminem/www/hiba-project/Dockerfile#L34) and refactored timeline logic into dynamic evaluation functions (`is_overdue`, `is_due_soon`) in [main.py:L26-L45](file:///Users/aminem/www/hiba-project/main.py#L26-L45) that calculate status on-the-fly and automatically exclude completed (`done`) tasks.
+
+---
+
+## Three AI usage rules
+
+1. **Never paste**: API keys, `.env` secrets, database credentials, production logs, or personal customer data into AI prompts or repository files.
+2. **Always verify**: Execute unit test suites (`pytest -v`), inspect diffs line-by-line, and verify container security context (`docker exec tt-app whoami`) before staging or merging code.
+3. **Record AI contributions by**: Explicitly documenting AI suggestions, model tools used, graded findings, and human architectural overrides in [docs/final-ai-review.md](file:///Users/aminem/www/hiba-project/docs/final-ai-review.md).
+
+---
+
+## Ownership statement
+
+I am completely comfortable submitting this repository as my own work. While AI tools assisted in drafting initial code templates, unit tests, and documentation formatting, every line of code, Docker configuration choice, and API contract was inspected, tested, and validated by me. I understand the entire system architecture, from Pydantic schema validation and state machine governance to non-root container deployment, and I accept full responsibility for all engineering decisions, code quality, and security controls in this project.
